@@ -67,6 +67,7 @@ class Candle:
     close: float
     close_time: int
     quote_volume: float
+    volume: float = 0.0  # en la moneda base, como el volumen del gráfico de Binance
 
     @classmethod
     def from_kline(cls, k: list[Any]) -> "Candle":
@@ -78,6 +79,7 @@ class Candle:
             close=float(k[4]),
             close_time=int(k[6]),
             quote_volume=float(k[7]),
+            volume=float(k[5]),
         )
 
 
@@ -181,8 +183,11 @@ class BinanceClient:
             result.append(Instrument(market, s["symbol"], s["baseAsset"], quote))
         return sorted(result, key=lambda i: i.symbol)
 
-    def daily_candles(self, instrument: Instrument, limit: int = KLINES_LIMIT) -> list[Candle]:
-        """Velas de 1D, de la más antigua a la actual (que puede estar en curso)."""
+    def candles(self, instrument: Instrument, interval: str, limit: int = KLINES_LIMIT) -> list[Candle]:
+        """Velas de ``interval`` (1d, 4h...), de la más antigua a la actual (que puede estar en curso)."""
         path = "/api/v3/klines" if instrument.market == SPOT else "/fapi/v1/klines"
-        params = {"symbol": instrument.symbol, "interval": "1d", "limit": limit}
+        params = {"symbol": instrument.symbol, "interval": interval, "limit": limit}
         return [Candle.from_kline(k) for k in self._get(instrument.market, path, params)]
+
+    def daily_candles(self, instrument: Instrument, limit: int = KLINES_LIMIT) -> list[Candle]:
+        return self.candles(instrument, "1d", limit)

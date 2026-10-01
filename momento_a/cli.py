@@ -7,9 +7,11 @@ import json
 import math
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional, Sequence
 
 from .binance import FUTURES, FUTURES_URL, SPOT, SPOT_URL, BinanceClient, BinanceError
+from .report import CHART_INTERVALS, fetch_chart_candles, render_html
 from .scanner import SORT_KEYS, Criteria, ScanResult, Signal, scan
 
 MARKET_CHOICES = {"spot": (SPOT,), "futuros": (FUTURES,), "ambos": (SPOT, FUTURES)}
@@ -49,6 +51,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", metavar="FICHERO", help="guardar los resultados en JSON")
     p.add_argument("--markdown", metavar="FICHERO",
                    help="guardar un informe en Markdown (lo usa el resumen de GitHub Actions)")
+    p.add_argument("--html", metavar="FICHERO",
+                   help="crear una página con gráficos interactivos (velas de "
+                        + ", ".join(CHART_INTERVALS) + ") de los pares encontrados")
     p.add_argument("--hilos", type=int, default=8, help="descargas en paralelo (por defecto: 8)")
     p.add_argument("--spot-url", default=SPOT_URL, help=f"URL base de spot (por defecto: {SPOT_URL})")
     p.add_argument("--futuros-url", default=FUTURES_URL,
@@ -247,4 +252,21 @@ def main(argv: Optional[Sequence[str]] = None, client: Optional[BinanceClient] =
     if args.markdown:
         with open(args.markdown, "w", encoding="utf-8") as f:
             f.write(render_markdown(shown, quote, summary))
+    if args.html:
+        try:
+            charts, chart_errors = fetch_chart_candles(
+                client, [s.instrument for s in shown], workers=max(1, args.hilos)
+            )
+        except BinanceError as exc:
+            print(f"Error al descargar las velas de los gráficos: {exc}", file=sys.stderr)
+            return 1
+        html = render_html(
+            [(signal_record(s), charts[s.instrument]) for s in shown], summary, quote, now
+        )
+        path = Path(args.html)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(html, encoding="utf-8")
+        print(f"Página con gráficos guardada en {args.html}")
+        for name, msg in list(chart_errors.items())[:5]:
+            print(f"Aviso: sin velas de {name}: {msg}", file=sys.stderr)
     return 0

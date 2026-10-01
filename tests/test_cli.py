@@ -19,6 +19,9 @@ class FakeClient:
     def daily_candles(self, instrument):
         return self.data[instrument]
 
+    def candles(self, instrument, interval, limit):
+        return self.data[instrument]
+
 
 def sample_client():
     strong, _ = downtrend(last_close=88.0)
@@ -71,6 +74,19 @@ def test_markdown_report_links_pairs_and_mentions_fallback(tmp_path, capsys):
     assert "- Coincidencias: 2" in md
     assert "| [BBBUSDT](https://www.binance.com/es/futures/BBBUSDT) | " in md
     assert "CCCUSDT" not in md
+
+
+def test_html_page_has_charts_for_each_match(tmp_path, capsys):
+    html_path = tmp_path / "sitio" / "index.html"
+    assert main(["--html", str(html_path)], client=sample_client()) == 0
+    assert "Página con gráficos guardada" in capsys.readouterr().out
+
+    html = html_path.read_text(encoding="utf-8")
+    start = html.index("window.MOMENTO_DATA = ") + len("window.MOMENTO_DATA = ")
+    data = json.loads(html[start : html.index(";\n", start)])
+    assert [p["par"] for p in data["pares"]] == ["BBBUSDT", "AAAUSDT"]
+    assert set(data["pares"][0]["velas"]) == {"2h", "4h", "8h", "12h", "1d"}
+    assert data["resumen"][2] == "Coincidencias: 2"
 
 
 def test_no_matches_message(capsys):
