@@ -1,0 +1,95 @@
+name: Scanner MA 1D
+
+on:
+  # Ejecución manual desde la pestaña Actions, con los filtros como opciones.
+  workflow_dispatch:
+    inputs:
+      mercado:
+        description: Mercados a escanear
+        type: choice
+        options: [ambos, spot, futuros]
+        default: ambos
+      tolerancia:
+        description: "% máximo por debajo de la MA(7) para contar como 'muy cerca'"
+        type: string
+        default: "2"
+      max_encima:
+        description: "% máximo por encima de la MA(7) (vacío = sin límite)"
+        type: string
+        default: ""
+      volumen_min:
+        description: Volumen mínimo de la última vela cerrada (en USDT)
+        type: string
+        default: "0"
+      orden:
+        description: "Orden: fuerza, ma7, cruce, bajista o volumen"
+        type: choice
+        options: [fuerza, ma7, cruce, bajista, volumen]
+        default: fuerza
+      sin_ma99:
+        description: No exigir MA25 < MA99 (basta con MA7 < MA25)
+        type: boolean
+        default: false
+      permitir_roja:
+        description: Incluir también velas rojas
+        type: boolean
+        default: false
+      vela_cerrada:
+        description: Evaluar la última vela cerrada en vez de la del día en curso
+        type: boolean
+        default: false
+  # Ejecución automática (horas en UTC; la vela diaria de Binance cierra a las 00:00 UTC).
+  schedule:
+    # Justo después del cierre: señales confirmadas con la vela que acaba de cerrar.
+    - cron: "17 0 * * *"
+    # Durante el día: vela en curso.
+    - cron: "17 12,18 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scanner
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Escanear Binance
+        env:
+          MERCADO: ${{ inputs.mercado || 'ambos' }}
+          TOLERANCIA: ${{ inputs.tolerancia || '2' }}
+          MAX_ENCIMA: ${{ inputs.max_encima }}
+          VOLUMEN_MIN: ${{ inputs.volumen_min || '0' }}
+          ORDEN: ${{ inputs.orden || 'fuerza' }}
+          SIN_MA99: ${{ inputs.sin_ma99 }}
+          PERMITIR_ROJA: ${{ inputs.permitir_roja }}
+          VELA_CERRADA: ${{ inputs.vela_cerrada || github.event.schedule == '17 0 * * *' }}
+        run: |
+          args=(--mercado "$MERCADO" --tolerancia "$TOLERANCIA" --volumen-min "$VOLUMEN_MIN" --orden "$ORDEN")
+          if [ -n "$MAX_ENCIMA" ]; then args+=(--max-encima "$MAX_ENCIMA"); fi
+          if [ "$SIN_MA99" = "true" ]; then args+=(--sin-ma99); fi
+          if [ "$PERMITIR_ROJA" = "true" ]; then args+=(--permitir-roja); fi
+          if [ "$VELA_CERRADA" = "true" ]; then args+=(--vela-cerrada); fi
+          python -m momento_a "${args[@]}" \
+            --csv resultados.csv --json resultados.json --markdown "$GITHUB_STEP_SUMMARY"
+
+      - name: Guardar resultados (CSV y JSON)
+        uses: actions/upload-artifact@v6
+        with:
+          name: resultados-${{ github.run_number }}
+          path: |
+            resultados.csv
+            resultados.json
+          retention-days: 30
