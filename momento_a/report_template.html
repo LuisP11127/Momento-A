@@ -1,528 +1,1733 @@
-<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Gráficos Momento-A</title>
+<title>Momento-A Scanner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Mesa de vigilancia: lista de candidatos a la izquierda y un gráfico grande a la derecha;
-   en el móvil la lista pasa a ser una tira horizontal encima del gráfico.
-   Tema oscuro por defecto (como el gráfico de Binance) y versión clara. */
+/* Terminal de trading: barra de estado arriba, cuadrícula de mini-gráficos y visor a pantalla completa. */
 :root {
-  --bg: #0d1116;
-  --panel: #131920;
-  --raised: #1a222b;
-  --line: #26303b;
-  --grid: #1c242d;
-  --fg: #e7ecf2;
-  --muted: #8b97a5;
-  --accent: #6aa8ff;
-  --up: #0ecb81;
-  --down: #f6465d;
-  --ma7: #f0b90b;
-  --ma25: #eb40b5;
-  --ma99: #b385f8;
-  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
-  --font-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
-  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  color-scheme: dark;
+  --bg: #F2F4F7;
+  --panel: #FFFFFF;
+  --sunken: #E8ECF1;
+  --line: #D8DEE6;
+  --grid: #EEF1F5;
+  --fg: #121821;
+  --muted: #5A6778;
+  --accent: #2457D6;
+  --up: #0B9A6A;
+  --down: #D13850;
+  --ma-fast: #B47C00;
+  --ma-mid: #BE2C8A;
+  --ma-slow: #6744D4;
+  --font-display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --col: 340px;
+  --mini-h: 190px;
 }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --bg: #f3f5f8; --panel: #ffffff; --raised: #eef2f6; --line: #dbe2ea; --grid: #edf1f5;
-    --fg: #111821; --muted: #566373; --accent: #2563c9;
-    --up: #089a6a; --down: #d9304a; --ma7: #c08c00; --ma25: #c42b95; --ma99: #7a4fd0;
-    color-scheme: light;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B1017; --panel: #121923; --sunken: #0E141C; --line: #243142; --grid: #19222E;
+    --fg: #E4E9F0; --muted: #8C99AC; --accent: #82A5FF; --up: #2CC088; --down: #F2566D;
+    --ma-fast: #F0B90B; --ma-mid: #EA4CB9; --ma-slow: #A98DFF;
+    color-scheme: dark;
   }
 }
-:root[data-theme="light"] {
-  --bg: #f3f5f8; --panel: #ffffff; --raised: #eef2f6; --line: #dbe2ea; --grid: #edf1f5;
-  --fg: #111821; --muted: #566373; --accent: #2563c9;
-  --up: #089a6a; --down: #d9304a; --ma7: #c08c00; --ma25: #c42b95; --ma99: #7a4fd0;
-  color-scheme: light;
+:root[data-theme="dark"] {
+  --bg: #0B1017; --panel: #121923; --sunken: #0E141C; --line: #243142; --grid: #19222E;
+  --fg: #E4E9F0; --muted: #8C99AC; --accent: #82A5FF; --up: #2CC088; --down: #F2566D;
+  --ma-fast: #F0B90B; --ma-mid: #EA4CB9; --ma-slow: #A98DFF;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; }
-body {
-  background: var(--bg);
-  color: var(--fg);
-  font: 15px/1.45 var(--font-body);
-  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
-  min-height: 100vh;
-}
-button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font-body); }
+button, input, select { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .up { color: var(--up); }
 .down { color: var(--down); }
+.c-fast { color: var(--ma-fast); }
+.c-mid { color: var(--ma-mid); }
+.c-slow { color: var(--ma-slow); }
 
-.page { max-width: 1560px; margin: 0 auto; display: grid; gap: 16px; }
+.wrap { max-width: 1680px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 32px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 900px) { .wrap { padding-inline: 28px; } }
 
-/* Cabecera */
-.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px; }
-.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; }
-.brand h1 {
-  margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 1.6rem;
-  font-stretch: 118%; letter-spacing: -0.01em; text-wrap: balance;
-}
-.brand .scan { font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); }
-.criteria { margin: 0; color: var(--muted); font-size: 0.86rem; max-width: 70ch; }
-.criteria b { color: var(--fg); font-weight: 600; }
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 32px; }
+.brand { display: grid; gap: 2px; }
+.brand h1 { margin: 0; font: 700 30px/1.05 var(--font-display); letter-spacing: 0.01em; text-wrap: balance; }
+.cond { margin: 0; font: 500 13.5px/1.3 var(--font-mono); color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0; }
+.meta div { display: grid; gap: 1px; }
+.meta dt { font: 600 11px/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.meta dd { margin: 0; font: 500 14px/1.3 var(--font-mono); font-variant-numeric: tabular-nums; }
+.top .btn { margin-left: auto; }
 
-/* Distribución principal */
-.layout { display: grid; grid-template-columns: minmax(250px, 300px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.btn, .icon-btn, select, input[type="search"] {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; color: var(--fg);
+}
+.btn { padding: 7px 12px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover, .icon-btn:hover { border-color: var(--muted); }
+.icon-btn { width: 34px; height: 34px; display: inline-grid; place-items: center; cursor: pointer; padding: 0; text-decoration: none; }
+.icon-btn svg, .btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+select, input[type="search"] { padding: 7px 10px; min-width: 0; }
+input[type="search"] { width: 13rem; max-width: 100%; }
 
-/* Lista de pares */
-.list { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
-.list-head {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
-  padding: 12px 14px; border-bottom: 1px solid var(--line);
-}
-.list-head h2 { margin: 0; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-.list-head .count { font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); }
-.pairs { list-style: none; margin: 0; padding: 6px; display: grid; gap: 2px; max-height: calc(100vh - 190px); overflow-y: auto; }
-.pair {
-  width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center;
-  padding: 9px 10px; border: 1px solid transparent; border-radius: 7px; background: none; cursor: pointer; text-align: left;
-}
-.pair:hover { background: var(--raised); }
-.pair[aria-current="true"] { background: var(--raised); border-color: var(--line); }
-.pair[aria-current="true"] .sym { color: var(--accent); }
-.pair .sym { font-weight: 650; font-size: 0.95rem; display: flex; align-items: center; gap: 7px; min-width: 0; }
-.pair .chg { font-family: var(--font-data); font-size: 0.86rem; text-align: right; }
-.pair .sub { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 8px; font-size: 0.76rem; color: var(--muted); }
-.mkt {
-  font-family: var(--font-data); font-size: 0.66rem; font-weight: 600; letter-spacing: 0.06em;
-  padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted);
-}
-.state { font-size: 0.72rem; padding: 0 6px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
-.state.cross { color: var(--up); }
-.state.near { color: var(--ma7); }
-.state.above { color: var(--muted); }
+.scan { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.scan label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.scan input[type="number"] { width: 9rem; max-width: 100%; padding: 7px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; color: var(--fg); font-family: var(--font-mono); }
+.scan input.short { width: 5.5rem; }
+.btn.primary { background: var(--fg); border-color: var(--fg); color: var(--panel); }
+.btn.primary:hover { border-color: var(--fg); opacity: 0.9; }
+.btn[disabled] { opacity: 0.5; cursor: progress; }
+.scan-status { font: 500 13px/1.35 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; min-width: 0; }
+.notice { margin: 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 8px; background: var(--sunken); color: var(--fg); font-size: 14px; }
+.notice b { font-weight: 600; }
+.notice.error { border-style: solid; border-color: var(--down); }
 
-/* Visor */
-.viewer {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-  min-width: 0; display: flex; flex-direction: column;
-}
-.viewer:fullscreen { border-radius: 0; border: 0; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
-.toolbar { display: grid; gap: 10px; padding: 14px 16px 12px; border-bottom: 1px solid var(--line); }
-.title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
-.title-row h2 {
-  margin: 0; font-family: var(--font-display); font-size: 1.45rem; font-weight: 750; font-stretch: 112%;
-  overflow-wrap: anywhere;
-}
-.title-row .price { font-family: var(--font-data); font-size: 1.05rem; }
-.title-row a { color: var(--accent); font-size: 0.85rem; text-decoration: none; margin-left: auto; }
-.title-row a:hover { text-decoration: underline; }
-.stats { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; }
-.stats div { display: grid; gap: 0; }
-.stats dt { font-size: 0.68rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
-.stats dd { margin: 0; font-family: var(--font-data); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
-.controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
-.seg, .zoom { display: inline-flex; flex-wrap: wrap; gap: 4px; }
-.btn {
-  min-width: 40px; padding: 6px 11px; border-radius: 7px; border: 1px solid var(--line);
-  background: var(--raised); cursor: pointer; font-family: var(--font-data); font-size: 0.85rem; line-height: 1.2;
-}
-.btn:hover { border-color: var(--muted); }
-.btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600; }
-.chart-wrap { position: relative; height: clamp(360px, calc(100vh - 290px), 900px); min-height: 0; }
-.viewer:fullscreen .chart-wrap { flex: 1; height: auto; }
-#chart { position: absolute; inset: 0; }
-.legend {
-  position: absolute; z-index: 3; top: 8px; left: 12px; right: 70px; pointer-events: none;
-  font-family: var(--font-data); font-size: 0.76rem; display: grid; gap: 2px;
-}
-.legend .row { display: flex; flex-wrap: wrap; gap: 2px 12px; }
-.legend .k { color: var(--muted); }
-.legend .ma7 { color: var(--ma7); }
-.legend .ma25 { color: var(--ma25); }
-.legend .ma99 { color: var(--ma99); }
-.notice { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); z-index: 4; }
-.hint { margin: 0; padding: 10px 16px 12px; border-top: 1px solid var(--line); font-size: 0.78rem; color: var(--muted); }
-kbd { font-family: var(--font-data); font-size: 0.72rem; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px; }
-.foot { color: var(--muted); font-size: 0.78rem; display: grid; gap: 4px; }
-.foot p { margin: 0; }
-.empty { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 40px 24px; text-align: center; color: var(--muted); }
-.empty h2 { color: var(--fg); font-family: var(--font-display); font-stretch: 112%; margin: 0 0 6px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.toolbar label, .toolbar .field { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.seg { display: inline-flex; padding: 2px; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; }
+.seg button { border: 0; background: transparent; color: var(--muted); padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--panel); }
+.seg .count { font-family: var(--font-mono); font-size: 12px; opacity: 0.8; margin-left: 4px; }
+.toolbar .spacer { flex: 1 1 0; }
 
-@media (max-width: 860px) {
-  .layout { grid-template-columns: minmax(0, 1fr); }
-  .pairs { display: flex; overflow-x: auto; overflow-y: hidden; max-height: none; gap: 6px; padding: 8px; scroll-snap-type: x proximity; }
-  .pairs li { flex: 0 0 auto; scroll-snap-align: start; }
-  .pair { width: auto; min-width: 168px; border-color: var(--line); }
-  .chart-wrap { height: clamp(320px, 62vh, 640px); }
-  .title-row a { margin-left: 0; }
-  .hint .keys { display: none; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--col)), 1fr)); gap: 12px; }
+.grid.size-s { --col: 250px; --mini-h: 130px; }
+.grid.size-m { --col: 340px; --mini-h: 190px; }
+.grid.size-l { --col: 540px; --mini-h: 300px; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 12px 10px; display: grid; gap: 6px; cursor: pointer; min-width: 0; }
+.card:hover { border-color: var(--muted); }
+.card-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sym { font: 600 19px/1.1 var(--font-display); letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sym small { font-size: 0.72em; color: var(--muted); font-weight: 600; margin-left: 1px; }
+.badge { font: 500 10.5px/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 5px; white-space: nowrap; }
+.card-head .icon-btn { margin-left: auto; width: 30px; height: 30px; flex: none; }
+.figures { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.price { font: 500 16px/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+.chg { font: 500 13px/1.2 var(--font-mono); }
+.ma-legend { display: flex; flex-wrap: wrap; gap: 2px 12px; font: 400 11.5px/1.35 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+.ma-legend span b { font-weight: 500; }
+.mini { height: var(--mini-h); border-radius: 4px; overflow: hidden; background: var(--panel); position: relative; }
+.mini .placeholder, .big .placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; text-align: center; padding: 8px; }
+.tf-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 12px; color: var(--muted); }
+.tf-row > span:first-child { margin-right: 4px; }
+.tf-chip { font: 500 11px/1 var(--font-mono); padding: 3px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+.tf-chip.on { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.tf-chip.na { border-style: dashed; opacity: 0.6; }
+.tf-tag { font: 500 11px/1 var(--font-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 5px; }
+.seg.tf button { font-family: var(--font-mono); font-size: 13px; }
+/* En pantallas estrechas la fila de temporalidades se desplaza dentro de sí misma en vez de ensanchar la página. */
+.seg button { flex: none; }
+.seg.tf { max-width: 100%; overflow-x: auto; scrollbar-width: thin; }
+.toolbar .field { min-width: 0; max-width: 100%; }
+.toolbar .field > .seg { min-width: 0; }
+.seg .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-left: 5px; vertical-align: middle; }
+.seg button[aria-pressed="true"] .dot { background: var(--panel); }
+.card-foot { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 13px; color: var(--muted); }
+.card-foot b { font: 500 13px var(--font-mono); color: var(--fg); font-variant-numeric: tabular-nums; }
+
+body.tracking .scan-only { display: none !important; }
+.seg.views { align-self: center; }
+.seg.views button { font-size: 15px; padding: 6px 14px; }
+.scan .check { gap: 6px; color: var(--fg); cursor: pointer; }
+.scan .check input { width: 16px; height: 16px; accent-color: var(--fg); margin: 0; }
+.track { display: grid; gap: 14px; }
+.track-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.track-bar label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.sync { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13.5px; color: var(--muted); }
+.sync b { color: var(--fg); font-weight: 600; }
+.btn.small { padding: 4px 10px; font-size: 13px; }
+.btn.danger { border-color: var(--down); color: var(--down); }
+.gh { display: grid; gap: 10px; max-width: 46rem; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.gh h3 { margin: 0; font: 600 19px/1.2 var(--font-display); }
+.gh ol { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; font-size: 14px; }
+.gh a { color: var(--accent); }
+.gh label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.gh input { padding: 8px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; color: var(--fg); font-family: var(--font-mono); min-width: 0; }
+.gh-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.gh-note, .gh-msg { margin: 0; font-size: 12.5px; color: var(--muted); }
+.days { display: grid; gap: 12px; }
+.day { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.day-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 12px 14px; }
+.day-toggle { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--fg); cursor: pointer; text-align: left; }
+.day-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.day-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+.day-toggle h2 { margin: 0; font: 600 21px/1.15 var(--font-display); letter-spacing: 0.01em; text-wrap: balance; }
+.day-stats { display: flex; flex-wrap: wrap; gap: 3px 14px; font-size: 13px; color: var(--muted); }
+.day-stats b { font: 500 13px var(--font-mono); color: var(--fg); font-variant-numeric: tabular-nums; }
+.day-stats b.up { color: var(--up); }
+.day-stats b.down { color: var(--down); }
+.day-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.day-actions .confirm { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.day-body { border-top: 1px solid var(--line); overflow-x: auto; }
+.coins { width: 100%; border-collapse: collapse; font-size: 14px; }
+.coins th { text-align: left; font: 600 11px/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 9px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.coins td { padding: 8px 14px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+.coins tbody tr:last-child td { border-bottom: 0; }
+.coins tbody tr { cursor: pointer; }
+.coins tbody tr:hover td, .coins tbody tr:focus-visible td { background: var(--sunken); }
+.coins tbody tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.coins .r { text-align: right; }
+.coins .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.coins .coin { font: 600 15px var(--font-display); letter-spacing: 0.01em; }
+.coins .coin small { font-size: 0.78em; color: var(--muted); margin-right: 8px; }
+.coins .muted { color: var(--muted); font-size: 13px; }
+.chgbar { display: inline-block; position: relative; width: 52px; height: 6px; margin-left: 10px; vertical-align: middle; background: var(--grid); border-radius: 3px; overflow: hidden; }
+.chgbar i { position: absolute; top: 0; bottom: 0; left: 0; background: currentColor; border-radius: 3px; }
+/* En el móvil cada moneda ocupa dos líneas: moneda y variación arriba, precio entonces y ahora debajo. */
+@media (max-width: 640px) {
+  .coins thead, .coins .col-scan, .chgbar { display: none; }
+  .coins tbody tr { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "coin pct" "then now"; gap: 2px 12px; padding: 9px 12px; border-bottom: 1px solid var(--grid); }
+  .coins tbody tr:last-child { border-bottom: 0; }
+  .coins td { padding: 0; border: 0; }
+  .coins .c-coin { grid-area: coin; }
+  .coins .c-pct { grid-area: pct; font-weight: 500; }
+  .coins .c-then { grid-area: then; text-align: left; font-size: 12.5px; }
+  .coins .c-now { grid-area: now; font-size: 12.5px; }
+  .coins .c-then::before, .coins .c-now::before { content: attr(data-label) " "; color: var(--muted); font-family: var(--font-body); }
 }
-@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+.empty { padding: 28px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; }
+.foot { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.foot a { color: inherit; }
+
+.viewer { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; flex-direction: column; gap: 10px;
+  padding-inline: 16px; padding-block: calc(env(safe-area-inset-top, 0px) + 14px) calc(env(safe-area-inset-bottom, 0px) + 12px); }
+@media (min-width: 900px) { .viewer { padding-inline: 28px; } }
+.viewer-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; }
+.viewer-title { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.viewer-title .sym { font-size: 28px; }
+.viewer-title .price { font-size: 19px; }
+.viewer-stats { display: flex; flex-wrap: wrap; gap: 2px 18px; font-size: 13.5px; color: var(--muted); }
+.viewer-stats b { font: 500 13.5px var(--font-mono); color: var(--fg); }
+.controls { margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.controls .sep { width: 1px; height: 22px; background: var(--line); margin-inline: 2px; }
+.viewer .ma-legend { font-size: 12.5px; gap: 2px 16px; }
+.big { flex: 1 1 auto; min-height: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); position: relative; }
+.hint { margin: 0; font-size: 12.5px; color: var(--muted); }
+body.viewing { overflow: hidden; }
+body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .viewer:not([hidden]) { animation: viewer-in 140ms ease-out; }
+  @keyframes viewer-in { from { opacity: 0; transform: scale(0.99); } to { opacity: 1; transform: none; } }
+}
+@media (max-width: 560px) {
+  .top .btn { margin-left: 0; }
+  .controls { margin-left: 0; }
+  .viewer-title .sym { font-size: 23px; }
+}
 </style>
-</head>
-<body>
-<div class="page">
+<!--BODY-->
+<div class="wrap">
   <header class="top">
     <div class="brand">
       <h1>Momento-A</h1>
-      <span class="scan" id="scan"></span>
+      <p class="cond" id="cond"></p>
     </div>
-    <p class="criteria" id="criteria"></p>
+    <nav class="seg views" id="views" aria-label="Secciones">
+      <button type="button" data-view="scan" aria-pressed="true">Escáner</button>
+      <button type="button" data-view="track" aria-pressed="false">Seguimiento</button>
+    </nav>
+    <dl class="meta scan-only" id="meta"></dl>
+    <button class="btn scan-only" id="load" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m0 0L8 8m4-4 4 4M5 15v4h14v-4"/></svg>
+      Cargar informe
+    </button>
+    <input id="file" type="file" accept=".html,.htm,.json,application/json,text/html" hidden>
   </header>
 
-  <main class="layout" id="layout">
-    <aside class="list" aria-label="Pares encontrados por el scanner">
-      <div class="list-head">
-        <h2>Candidatos</h2>
-        <span class="count" id="count"></span>
-      </div>
-      <ol class="pairs" id="pairs"></ol>
-    </aside>
+  <form class="scan scan-only" id="scan-form" autocomplete="off">
+    <label>Mercado
+      <select id="scan-market">
+        <option value="ambos">Spot y futuros</option>
+        <option value="spot">Spot</option>
+        <option value="futures">Futuros</option>
+      </select>
+    </label>
+    <label>Velas
+      <select id="scan-interval">
+        <option>15m</option><option>30m</option><option>1h</option><option>2h</option>
+        <option>4h</option><option>6h</option><option>8h</option><option>12h</option>
+        <option value="1d" selected>1D</option><option value="1w">1W</option>
+      </select>
+    </label>
+    <label>Vol. mín. 24h
+      <input id="scan-minvol" type="number" min="0" step="100000" value="0" inputmode="numeric" aria-label="Volumen mínimo en 24 horas, en USDT"> USDT
+    </label>
+    <label title="Cuánto puede estar el precio por debajo de la MA(7) y seguir contando como «muy cerca»">Margen bajo MA7
+      <input id="scan-tol" class="short" type="number" min="0" max="50" step="0.5" value="2" inputmode="decimal" aria-label="Porcentaje máximo por debajo de la MA(7)"> %
+    </label>
+    <label class="check" title="Tendencia muy bajista: la MA(25) también por debajo de la MA(99)"><input id="scan-ma99" type="checkbox" checked> MA25 &lt; MA99</label>
+    <label class="check" title="La vela tiene que ir en verde (precio por encima de la apertura)"><input id="scan-green" type="checkbox" checked> Vela verde</label>
+    <label class="check"><input id="scan-track" type="checkbox" checked> Guardar en seguimiento</label>
+    <button class="btn primary" id="scan-go" type="submit">Escanear</button>
+    <span class="scan-status" id="scan-status" aria-live="polite"></span>
+  </form>
+  <p class="notice scan-only" id="notice" hidden></p>
 
-    <section class="viewer" id="viewer" aria-label="Gráfico del par seleccionado">
-      <div class="toolbar">
-        <div class="title-row">
-          <span class="mkt" id="vMkt"></span>
-          <h2 id="vSym"></h2>
-          <span class="price" id="vPrice"></span>
-          <a id="vLink" href="#" target="_blank" rel="noopener">Abrir en Binance ↗</a>
-        </div>
-        <dl class="stats" id="vStats"></dl>
-        <div class="controls">
-          <div class="seg" id="intervals" role="group" aria-label="Temporalidad de las velas"></div>
-          <div class="zoom" role="group" aria-label="Zoom del gráfico">
-            <button class="btn" id="zoomOut" type="button" title="Alejar (tecla −)" aria-label="Alejar">−</button>
-            <button class="btn" id="zoomIn" type="button" title="Acercar (tecla +)" aria-label="Acercar">+</button>
-            <button class="btn" id="fit" type="button" title="Ver todas las velas (tecla 0)">Todo</button>
-            <button class="btn" id="reset" type="button" title="Volver a las últimas velas (tecla R)">Últimas</button>
-            <button class="btn" id="full" type="button" title="Pantalla completa (tecla F)">Pantalla completa</button>
-          </div>
-        </div>
-      </div>
-      <div class="chart-wrap">
-        <div class="legend" id="legend" aria-live="off"></div>
-        <div id="chart"></div>
-        <p class="notice" id="notice" hidden></p>
-      </div>
-      <p class="hint">Rueda del ratón o pellizco para acercar o alejar · arrastra para desplazarte · horas en UTC<span class="keys"> · <kbd>↑</kbd> <kbd>↓</kbd> cambian de par · <kbd>1</kbd>–<kbd>5</kbd> temporalidad</span></p>
-    </section>
-  </main>
+  <div class="toolbar scan-only" id="toolbar">
+    <div class="seg" id="market" role="group" aria-label="Mercado"></div>
+    <label>Orden
+      <select id="sort">
+        <option value="fuerza">Vela más fuerte</option>
+        <option value="cruce">Más cerca del cruce MA7/MA25</option>
+        <option value="ma7">Más pegadas a la MA7</option>
+        <option value="bajista">Más bajistas (lejos de MA99)</option>
+        <option value="volumen">Mayor volumen 24h</option>
+        <option value="variacion">Mayor variación 24h</option>
+        <option value="simbolo">Símbolo</option>
+      </select>
+    </label>
+    <input id="search" type="search" placeholder="Buscar moneda" aria-label="Buscar moneda" autocomplete="off">
+    <span class="field">Gráfico
+      <span class="seg tf" id="tf" role="group" aria-label="Temporalidad de los gráficos"></span>
+    </span>
+    <span class="spacer"></span>
+    <span class="field">Tamaño
+      <span class="seg" id="size" role="group" aria-label="Tamaño de los gráficos">
+        <button type="button" data-size="s" aria-pressed="false">S</button>
+        <button type="button" data-size="m" aria-pressed="true">M</button>
+        <button type="button" data-size="l" aria-pressed="false">L</button>
+      </span>
+    </span>
+  </div>
 
-  <footer class="foot" id="foot">
-    <p>Datos públicos de Binance. Gráficos con TradingView Lightweight Charts. Esto es un filtro técnico, no una recomendación de inversión.</p>
+  <main class="grid scan-only size-m" id="grid" aria-live="polite"></main>
+  <p class="empty scan-only" id="empty" hidden></p>
+
+  <section class="track" id="view-track" aria-label="Seguimiento" hidden>
+    <div class="track-bar">
+      <div class="seg" id="track-market" role="group" aria-label="Mercado"></div>
+      <label>Orden
+        <select id="track-sort">
+          <option value="subida">Mayor subida</option>
+          <option value="bajada">Mayor bajada</option>
+          <option value="moneda">Moneda</option>
+          <option value="escaneo">Orden del escaneo</option>
+        </select>
+      </label>
+      <button class="btn" id="track-refresh" type="button">Actualizar precios</button>
+      <span class="scan-status" id="track-status" aria-live="polite"></span>
+    </div>
+    <div class="sync" id="track-sync"></div>
+    <form class="gh" id="gh-form" autocomplete="off" hidden>
+      <h3>Guardar el seguimiento en GitHub</h3>
+      <ol>
+        <li>Abre <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">crear una clave (fine-grained token)</a> en GitHub.</li>
+        <li>Ponle un nombre (por ejemplo, <b>Momento-A</b>). En <b>Repository access</b> elige <b>Only select repositories</b> y tu repositorio.</li>
+        <li>En <b>Permissions → Repository permissions → Contents</b> elige <b>Read and write</b>.</li>
+        <li>Pulsa <b>Generate token</b>, copia la clave y pégala aquí.</li>
+      </ol>
+      <label>Repositorio
+        <input id="gh-repo" placeholder="usuario/repositorio" spellcheck="false">
+      </label>
+      <label>Clave
+        <input id="gh-token" type="password" placeholder="github_pat_…" spellcheck="false">
+      </label>
+      <div class="gh-actions">
+        <button class="btn primary" type="submit">Conectar</button>
+        <button class="btn" id="gh-cancel" type="button">Cancelar</button>
+        <p class="gh-msg" id="gh-msg" aria-live="polite"></p>
+      </div>
+      <p class="gh-note">La clave se guarda solo en este navegador y solo se envía a GitHub. Cada día de seguimiento queda como un archivo en <code>docs/seguimiento/</code> del repositorio.</p>
+    </form>
+    <p class="notice" id="track-notice" hidden></p>
+    <div class="days" id="track-days"></div>
+  </section>
+
+  <footer class="foot">
+    <span>Datos: API pública de Binance.</span>
+    <span>Gráficos: <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView Lightweight Charts</a>.</span>
+    <span>No es una recomendación de inversión.</span>
   </footer>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js"></script>
-<script>
-window.MOMENTO_DATA = /*__DATOS__*/null;
-</script>
-<script>
-(function () {
-  "use strict";
-  const DATA = window.MOMENTO_DATA || { generado: "", resumen: [], cotizacion: "USDT", intervalos: ["2h", "4h", "8h", "12h", "1d"], pares: [] };
-  const LABELS = { "2h": "2h", "4h": "4h", "8h": "8h", "12h": "12h", "1d": "1D" };
-  // Velas visibles al abrir un gráfico (menos en pantallas estrechas para que no queden apretadas).
-  const defaultBars = () => (window.innerWidth < 600 ? 60 : 120);
-  const $ = (id) => document.getElementById(id);
-  const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-labelledby="v-sym" hidden>
+  <div class="viewer-head">
+    <div class="viewer-title">
+      <span class="sym" id="v-sym"></span>
+      <span class="badge" id="v-badge"></span>
+      <span class="price" id="v-price"></span>
+      <span class="chg" id="v-chg"></span>
+    </div>
+    <div class="viewer-stats" id="v-stats"></div>
+    <div class="seg tf" id="v-tf" role="group" aria-label="Temporalidad del gráfico"></div>
+    <div class="controls">
+      <button class="icon-btn" id="v-prev" type="button" title="Moneda anterior (←)" aria-label="Moneda anterior">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+      <button class="icon-btn" id="v-next" type="button" title="Moneda siguiente (→)" aria-label="Moneda siguiente">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+      <span class="sep" aria-hidden="true"></span>
+      <button class="icon-btn" id="v-out" type="button" title="Alejar (−)" aria-label="Alejar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+      <button class="icon-btn" id="v-in" type="button" title="Acercar (+)" aria-label="Acercar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="icon-btn" id="v-fit" type="button" title="Ver todo el historial (0)" aria-label="Ver todo el historial">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <a class="icon-btn" id="v-link" target="_blank" rel="noopener" title="Abrir en Binance" aria-label="Abrir en Binance">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M17 14v5H5V7h5"/></svg></a>
+      <span class="sep" aria-hidden="true"></span>
+      <button class="icon-btn" id="v-close" type="button" title="Cerrar (Esc)" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+  </div>
+  <div class="ma-legend" id="v-legend"></div>
+  <div class="big" id="big"></div>
+  <p class="hint">Rueda del ratón o pellizco para acercar y alejar · arrastra para moverte en el tiempo · ← → cambia de moneda · Esc cierra · el punto marca las temporalidades donde también se cumple la condición</p>
+</div>
 
-  // ---------- formato ----------
-  function decimalsFor(price) {
-    if (!(price > 0)) return 2;
-    if (price >= 1000) return 2;
-    if (price >= 1) return 4;
-    return Math.min(10, Math.ceil(-Math.log10(price)) + 3);
+<script id="momento-data" type="application/json">__MOMENTO_DATA__</script>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-stKllnUqA9AD0gsKCuUtf5XlqAW7PwIgDagoNsTWkjkBmJ/GZ/uHTgEBxdLV2VSK" crossorigin="anonymous"></script>
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const MARKET_NAMES = { spot: "Spot", futures: "Futuros" };
+  const SIZES = { s: 90, m: 120, l: 160 };  // velas visibles en cada mini-gráfico
+  const state = { data: null, items: [], view: [], market: "todos", sort: "fuerza", q: "", size: "l", current: -1, tf: null, vtf: null, freshSince: 0, trackSaved: null };
+  const minis = new Map();  // elemento .mini -> entrada de gráfico
+  let big = null;
+  let lastFocus = null;
+
+  // ---------- utilidades ----------
+  function h(tag, attrs, ...children) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === "class") el.className = v; else if (k === "text") el.textContent = v; else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of children) if (c != null) el.append(c);
+    return el;
   }
-  const fmtPrice = (v, d) => v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
-  const fmtPct = (v) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2) + "%";
+  const store = {
+    get(k) { try { return localStorage.getItem("momento-a:" + k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem("momento-a:" + k, v); } catch (e) { /* sin almacenamiento */ } },
+  };
+  function decimals(v) {
+    if (!v) return 2;
+    return Math.max(2, Math.min(10, 4 - Math.floor(Math.log10(Math.abs(v)))));
+  }
+  function fmtPrice(v) {
+    if (v == null || !isFinite(v)) return "-";
+    const d = decimals(v);
+    return v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+  function fmtPct(v) { return v == null || !isFinite(v) ? "-" : (v >= 0 ? "+" : "") + v.toFixed(2) + "%"; }
   function fmtVol(v) {
-    const units = [[1e9, "B"], [1e6, "M"], [1e3, "K"]];
-    for (const [lim, s] of units) if (v >= lim) return (v / lim).toFixed(1) + s;
+    if (v == null || !isFinite(v)) return "-";
+    for (const [lim, s] of [[1e9, "B"], [1e6, "M"], [1e3, "K"]]) if (Math.abs(v) >= lim) return (v / lim).toFixed(2) + s;
     return v.toFixed(0);
   }
-  const signClass = (v) => (v > 0 ? "up" : v < 0 ? "down" : "");
-
-  // ---------- cabecera ----------
-  const summary = DATA.resumen || [];
-  $("scan").textContent = summary[0] || "Sin datos de escaneo";
-  const crit = summary[1] || "";
-  $("criteria").textContent = "";
-  if (crit) {
-    const [label, rest] = crit.split(/:\s(.+)/);
-    if (rest) { $("criteria").append(el("b", null, label + ": "), rest); } else { $("criteria").textContent = crit; }
-  }
-  for (const line of summary.slice(3)) $("foot").append(el("p", null, line));
-
-  const pairs = DATA.pares || [];
-  $("count").textContent = pairs.length + (pairs.length === 1 ? " par" : " pares");
-
-  if (!pairs.length) {
-    const empty = el("section", "empty");
-    empty.append(el("h2", null, "Ningún par cumple los criterios en este escaneo"),
-      el("p", null, "El scanner vuelve a ejecutarse automáticamente; esta página se actualiza con cada escaneo."));
-    $("layout").replaceWith(empty);
-    return;
-  }
-
-  // ---------- estado ----------
-  const store = {
-    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
-    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* sin almacenamiento */ } },
-  };
-  const pairId = (p) => (p.mercado === "SPOT" ? "spot-" : "fut-") + p.par;
-  let interval = DATA.intervalos.includes(store.get("momento.intervalo")) ? store.get("momento.intervalo") : "1d";
-  const fromHash = decodeURIComponent(location.hash.slice(1));
-  let current = Math.max(0, pairs.findIndex((p) => pairId(p) === fromHash));
-
-  // ---------- lista ----------
-  const pairButtons = pairs.map((p, i) => {
-    const b = el("button", "pair");
-    b.type = "button";
-    const sym = el("span", "sym");
-    sym.append(el("span", "mkt", p.mercado), el("span", null, p.par));
-    const chg = el("span", "chg " + signClass(p.vela_pct), fmtPct(p.vela_pct));
-    const sub = el("span", "sub");
-    sub.append(el("span", "num", "vs MA7 " + fmtPct(p.vs_ma7_pct)));
-    const days = p.dias_sobre_ma7;
-    const state = days === 0 ? el("span", "state near", "pegada a MA7")
-      : days === 1 ? el("span", "state cross", "cruza hoy")
-      : el("span", "state above", days + " días encima");
-    sub.append(state);
-    b.append(sym, chg, sub);
-    b.addEventListener("click", () => select(i));
-    const li = el("li");
-    li.append(b);
-    $("pairs").append(li);
-    return b;
-  });
-
-  const intervalButtons = DATA.intervalos.map((iv, i) => {
-    const b = el("button", "btn", LABELS[iv] || iv);
-    b.type = "button";
-    b.title = "Velas de " + (LABELS[iv] || iv) + " (tecla " + (i + 1) + ")";
-    b.addEventListener("click", () => setInterval_(iv));
-    $("intervals").append(b);
-    return b;
-  });
-
-  // ---------- gráfico ----------
-  const LWC = window.LightweightCharts;
-  if (!LWC) {
-    showNotice("No se pudo cargar la librería de gráficos. Comprueba tu conexión a internet y recarga la página.");
-    renderHeader();
-    return;
-  }
-  const tok = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-
-  const chart = LWC.createChart($("chart"), {
-    autoSize: true,
-    localization: { locale: "es-ES" },
-    crosshair: { mode: LWC.CrosshairMode.Normal },
-    timeScale: { timeVisible: true, secondsVisible: false, rightOffset: 4 },
-    layout: { fontFamily: tok("--font-data"), fontSize: 11, attributionLogo: true },
-  });
-  const candleSeries = chart.addSeries(LWC.CandlestickSeries, { borderVisible: false });
-  const lineOpts = { lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false };
-  const maSeries = { 7: chart.addSeries(LWC.LineSeries, lineOpts), 25: chart.addSeries(LWC.LineSeries, lineOpts), 99: chart.addSeries(LWC.LineSeries, lineOpts) };
-  const volSeries = chart.addSeries(LWC.HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "", lastValueVisible: false, priceLineVisible: false });
-  volSeries.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
-  candleSeries.priceScale().applyOptions({ scaleMargins: { top: 0.12, bottom: 0.22 } });
-
-  function applyTheme() {
-    chart.applyOptions({
-      layout: { background: { type: "solid", color: tok("--panel") }, textColor: tok("--muted") },
-      grid: { vertLines: { color: tok("--grid") }, horzLines: { color: tok("--grid") } },
-      rightPriceScale: { borderColor: tok("--line") },
-      timeScale: { borderColor: tok("--line") },
-      crosshair: { vertLine: { labelBackgroundColor: tok("--raised") }, horzLine: { labelBackgroundColor: tok("--raised") } },
-    });
-    const up = tok("--up"), down = tok("--down");
-    candleSeries.applyOptions({ upColor: up, downColor: down, wickUpColor: up, wickDownColor: down });
-    maSeries[7].applyOptions({ color: tok("--ma7") });
-    maSeries[25].applyOptions({ color: tok("--ma25") });
-    maSeries[99].applyOptions({ color: tok("--ma99") });
-    if (rows.length) volSeries.setData(volumeData(rows));
-  }
-
-  // ---------- datos ----------
-  let rows = [];
-  let maData = { 7: [], 25: [], 99: [] };
-  let indexByTime = new Map();
-  let decimals = 2;
-
-  function sma(data, n) {
-    const out = [];
+  function bars(it) { return it.velas_sobre_ma7 == null ? "-" : String(it.velas_sobre_ma7); }
+  // Cuánto (%) tiene que subir la MA7 para cruzar la MA25.
+  function gapToMid(it) { return it.ma7 && it.ma25 ? (it.ma25 - it.ma7) / it.ma7 * 100 : null; }
+  function fmtGap(v) { return v == null || !isFinite(v) ? "-" : v.toFixed(2) + "%"; }
+  const fmtNum = (v) => String(+Number(v).toFixed(2));
+  function sma(values, period) {
+    const out = new Array(values.length).fill(null);
     let sum = 0;
-    for (let i = 0; i < data.length; i++) {
-      sum += data[i][4];
-      if (i >= n) sum -= data[i - n][4];
-      if (i >= n - 1) out.push({ time: data[i][0], value: sum / n });
+    for (let i = 0; i < values.length; i++) {
+      sum += values[i];
+      if (i >= period) sum -= values[i - period];
+      if (i >= period - 1) out[i] = sum / period;
     }
     return out;
   }
-  function volumeData(data) {
-    const up = tok("--up"), down = tok("--down");
-    return data.map((r) => ({ time: r[0], value: r[5], color: (r[4] >= r[1] ? up : down) + "66" }));
+  function tokens() {
+    const cs = getComputedStyle(document.documentElement);
+    const g = (n) => cs.getPropertyValue(n).trim();
+    return { panel: g("--panel"), grid: g("--grid"), line: g("--line"), fg: g("--fg"), muted: g("--muted"),
+      up: g("--up"), down: g("--down"), ma: [g("--ma-fast"), g("--ma-mid"), g("--ma-slow")], mono: g("--font-mono"), accent: g("--accent") };
+  }
+  function binanceUrl(it) {
+    return it.mercado === "futures"
+      ? "https://www.binance.com/es/futures/" + encodeURIComponent(it.simbolo)
+      : "https://www.binance.com/es/trade/" + encodeURIComponent(it.base + "_" + it.quote) + "?type=spot";
   }
 
-  function load() {
-    const p = pairs[current];
-    rows = (p.velas && p.velas[interval]) || [];
-    if (!rows.length) {
-      showNotice("No hay velas de " + (LABELS[interval] || interval) + " para " + p.par + " en este escaneo.");
-      candleSeries.setData([]); volSeries.setData([]);
-      for (const n of [7, 25, 99]) maSeries[n].setData([]);
-      $("legend").textContent = "";
-      return;
+  // ---------- datos ----------
+  function parsePayload(text) {
+    text = text.trim();
+    let obj;
+    if (text.startsWith("{")) {
+      obj = JSON.parse(text);
+    } else {
+      const doc = new DOMParser().parseFromString(text, "text/html");
+      const el = doc.getElementById("momento-data");
+      if (!el) throw new Error("no es un informe de Momento-A");
+      obj = JSON.parse(el.textContent);
     }
-    $("notice").hidden = true;
-    decimals = decimalsFor(rows[rows.length - 1][4]);
-    const pf = { type: "price", precision: decimals, minMove: Math.pow(10, -decimals) };
-    candleSeries.applyOptions({ priceFormat: pf });
-    for (const n of [7, 25, 99]) maSeries[n].applyOptions({ priceFormat: pf });
-    candleSeries.setData(rows.map((r) => ({ time: r[0], open: r[1], high: r[2], low: r[3], close: r[4] })));
-    volSeries.setData(volumeData(rows));
-    indexByTime = new Map(rows.map((r, i) => [r[0], i]));
-    for (const n of [7, 25, 99]) {
-      maData[n] = sma(rows, n);
-      maSeries[n].setData(maData[n]);
+    if (!obj || typeof obj !== "object" || !obj.mercados) throw new Error("no contiene resultados del scanner");
+    if (!obj.criterios) throw new Error("es un informe de otro scanner, no de Momento-A");
+    return obj;
+  }
+  const ALL_TFS = ["15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "1w"];
+  const DEFAULT_TF = "1d";
+  // Temporalidades que trae el escaneo (para «Cumple en») y todas las que se pueden ver en los gráficos.
+  function intervals() { return state.data.intervalos_grafico || [state.data.intervalo]; }
+  function chartTfs() {
+    return [...new Set([...ALL_TFS, ...intervals()])].sort((a, b) => (TF_MINUTES[a] || 0) - (TF_MINUTES[b] || 0));
+  }
+  function tfLabel(tf) { return tf.replace(/d$/, "D").replace(/w$/, "W"); }
+  function rowsFor(it, tf) {
+    const rows = tf === state.data.intervalo ? it.velas : (it.graficos || {})[tf];
+    return Array.isArray(rows) && rows.length ? rows : null;
+  }
+  function seriesData(it, tf) {
+    it._sd = it._sd || {};
+    if (tf in it._sd) return it._sd[tf];
+    const rows = rowsFor(it, tf);
+    if (!rows) return (it._sd[tf] = null);
+    // Lightweight Charts dibuja en UTC: desplazamos a la hora local del navegador.
+    const time = (ms) => Math.floor(ms / 1000) - new Date(ms).getTimezoneOffset() * 60;
+    const candles = rows.map((k) => ({ time: time(k[0]), open: k[1], high: k[2], low: k[3], close: k[4] }));
+    const closes = rows.map((k) => k[4]);
+    const periods = state.data.medias || [7, 25, 99];
+    const raw = periods.map((p) => sma(closes, p));
+    const mas = raw.map((arr) => arr.flatMap((v, i) => (v == null ? [] : [{ time: candles[i].time, value: v }])));
+    const volume = rows.map((k, i) => ({ time: candles[i].time, value: k[5], up: k[4] >= k[1] }));
+    return (it._sd[tf] = { candles, raw, mas, volume });
+  }
+  // Criterios del escaneo: MA7 < MA25 (y MA25 < MA99), precio cerca o encima de la MA7, vela verde.
+  const DEFAULT_CRIT = { tolerancia: 2, max_encima: null, ma99: true, verde: true, min_volumen: 0 };
+  function criteria() { return Object.assign({}, DEFAULT_CRIT, (state.data && state.data.criterios) || {}); }
+  function passes(open, close, f, m, s, crit) {
+    if (f == null || m == null || !(f < m)) return false;  // la MA7 sigue debajo de la MA25
+    if (crit.ma99 && !(s != null && m < s)) return false;  // muy bajista: MA25 < MA99
+    const dist = (close - f) / f * 100;                  // precio respecto a la MA7
+    if (dist < -crit.tolerancia) return false;
+    if (crit.max_encima != null && dist > crit.max_encima) return false;
+    if (crit.verde && !(close > open)) return false;     // la vela toma fuerza
+    return true;
+  }
+  // ¿Se cumple la condición en la última vela de esa temporalidad? (null = sin datos)
+  function meets(it, tf) {
+    const sd = seriesData(it, tf);
+    if (!sd) return null;
+    const crit = criteria();
+    const i = sd.candles.length - 1 - (state.data.solo_cerradas ? 1 : 0);
+    const [f, m, s] = sd.raw.map((arr) => arr[i]);
+    if (f == null || m == null || (crit.ma99 && s == null)) return null;
+    const c = sd.candles[i];
+    return passes(c.open, c.close, f, m, s, crit);
+  }
+  function tfButtons(container, selected, onPick, it) {
+    container.textContent = "";
+    for (const tf of chartTfs()) {
+      const b = h("button", { type: "button", "aria-pressed": String(tf === selected) }, tfLabel(tf));
+      if (it && meets(it, tf)) {
+        b.append(h("span", { class: "dot", title: "La condición también se cumple en " + tfLabel(tf) }));
+      }
+      b.addEventListener("click", () => onPick(tf));
+      container.append(b);
     }
-    showLatest();
-    updateLegend(rows.length - 1);
+  }
+  function renderTf() {
+    // Cada cambio de temporalidad vuelve a pedir las velas a Binance para los gráficos que se ven.
+    tfButtons($("tf"), state.tf, (tf) => { state.tf = tf; state.freshSince = Date.now(); renderTf(); renderGrid(); });
+  }
+  // fresh: los datos acaban de descargarse (escaneo desde esta página), no hace falta volver a pedirlos.
+  function setData(data, fresh) {
+    state.data = data;
+    state.items = [];
+    const now = Date.now();
+    state.freshSince = fresh ? now : 0;
+    for (const [key, m] of Object.entries(data.mercados)) {
+      for (const it of m.coincidencias || []) {
+        const item = Object.assign({ mercado: key }, it);
+        if (fresh) {
+          item._fresh = {};
+          for (const tf of [data.intervalo, ...Object.keys(item.graficos || {})]) item._fresh[tf] = now;
+        }
+        state.items.push(item);
+      }
+    }
+    if (data.orden && !store.get("sort")) state.sort = data.orden;
+    if (!SORTS[state.sort]) state.sort = "fuerza";
+    $("sort").value = state.sort;
+    if (!state.tf) state.tf = DEFAULT_TF;
+    $("toolbar").hidden = false;
+    renderTf();
+    renderHeader();
+    renderNotice();
+    renderGrid();
   }
 
-  function maAt(n, i) {
-    const j = i - (n - 1);
-    return j >= 0 && maData[n][j] ? maData[n][j].value : null;
-  }
-  function updateLegend(i) {
-    const r = rows[i];
-    if (!r) return;
-    const lg = $("legend");
-    lg.textContent = "";
-    const d = new Date(r[0] * 1000);
-    const when = d.toISOString().slice(0, 16).replace("T", " ") + " UTC";
-    const chg = r[1] ? ((r[4] - r[1]) / r[1]) * 100 : 0;
-    const row1 = el("div", "row");
-    row1.append(el("span", "k", when));
-    for (const [k, v] of [["A", r[1]], ["M", r[2]], ["m", r[3]], ["C", r[4]]]) {
-      const s = el("span");
-      s.append(el("span", "k", k + " "), el("span", signClass(chg), fmtPrice(v, decimals)));
-      row1.append(s);
+  // ---------- cabecera ----------
+  function renderHeader() {
+    const d = state.data;
+    const [f, m, s] = d.medias || [7, 25, 99];
+    const cond = $("cond");
+    cond.textContent = "";
+    const cr = criteria();
+    cond.append(h("span", { class: "c-fast", text: "MA" + f }), " < ", h("span", { class: "c-mid", text: "MA" + m }));
+    if (cr.ma99) cond.append(" < ", h("span", { class: "c-slow", text: "MA" + s }));
+    cond.append("  ·  precio ≥ ", h("span", { class: "c-fast", text: "MA" + f }), " −" + fmtNum(cr.tolerancia) + "%");
+    if (cr.max_encima != null) cond.append(" y ≤ +" + fmtNum(cr.max_encima) + "%");
+    if (cr.verde) cond.append("  ·  vela verde");
+    const meta = $("meta");
+    meta.textContent = "";
+    const add = (dt, dd) => meta.append(h("div", null, h("dt", { text: dt }), h("dd", { text: dd })));
+    add("Velas", tfLabel(d.intervalo) + (d.solo_cerradas ? " cerradas" : ""));
+    const when = new Date(d.generado);
+    add("Escaneo", isNaN(when) ? "-" : when.toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" }));
+    for (const [key, mk] of Object.entries(d.mercados)) {
+      add(MARKET_NAMES[key] || mk.nombre || key, (mk.coincidencias || []).length + " de " + (mk.analizadas ?? "?"));
     }
-    row1.append(el("span", signClass(chg), fmtPct(chg)));
-    const row2 = el("div", "row");
-    for (const n of [7, 25, 99]) {
-      const v = maAt(n, i);
-      row2.append(el("span", "ma" + n, "MA(" + n + ") " + (v == null ? "—" : fmtPrice(v, decimals))));
+    const seg = $("market");
+    seg.textContent = "";
+    const options = [["todos", "Todos", state.items.length]];
+    for (const key of Object.keys(d.mercados)) {
+      options.push([key, MARKET_NAMES[key] || key, state.items.filter((it) => it.mercado === key).length]);
     }
-    lg.append(row1, row2);
+    if (Object.keys(d.mercados).length > 1) options.push(["unicas", "No repetidas", uniqueItems(state.items).length]);
+    if (!options.some(([k]) => k === state.market)) state.market = "todos";
+    for (const [key, label, n] of options) {
+      const b = h("button", { type: "button", "aria-pressed": String(key === state.market) }, label, h("span", { class: "count", text: String(n) }));
+      b.addEventListener("click", () => { state.market = key; renderHeader(); renderGrid(); });
+      seg.append(b);
+    }
   }
-  chart.subscribeCrosshairMove((param) => {
-    const i = param && param.time != null ? indexByTime.get(param.time) : undefined;
-    updateLegend(i == null ? rows.length - 1 : i);
-  });
+  // Moneda sin el multiplicador de algunos contratos de futuros (1000PEPE → PEPE, 1MBABYDOGE → BABYDOGE).
+  function coinOf(it) { return String(it.base || it.simbolo).replace(/^(1000000|100000|10000|1000|1M)(?=[A-Z])/, ""); }
+  // Cada moneda una sola vez: si está en spot y en futuros, se queda la de spot.
+  function uniqueItems(items) {
+    const spotCoins = new Set(items.filter((it) => it.mercado === "spot").map(coinOf));
+    return items.filter((it) => it.mercado === "spot" || !spotCoins.has(coinOf(it)));
+  }
+  function renderNotice(label, text, isError) {
+    const n = $("notice");
+    n.textContent = "";
+    n.classList.toggle("error", !!isError);
+    if (!label && !text && state.data && state.data.ejemplo) {
+      label = "Datos de ejemplo. ";
+      text = "Monedas inventadas con precios aleatorios. Ejecuta el scanner en tu ordenador y arrastra aquí el informe .html (o el .json) para ver tus resultados.";
+    }
+    n.hidden = !(label || text);
+    if (label) n.append(h("b", { text: label }));
+    if (text) n.append(text);
+  }
 
-  // ---------- zoom ----------
-  function showLatest() {
-    const n = rows.length;
-    const bars = defaultBars();
-    if (n <= bars) chart.timeScale().fitContent();
-    else chart.timeScale().setVisibleLogicalRange({ from: n - bars, to: n + 4 });
+  // ---------- cuadrícula ----------
+  const SORTS = {
+    fuerza: (a, b) => (b.vela_pct ?? -Infinity) - (a.vela_pct ?? -Infinity),
+    cruce: (a, b) => (b.ma7_vs_ma25_pct ?? -Infinity) - (a.ma7_vs_ma25_pct ?? -Infinity),
+    ma7: (a, b) => Math.abs(a.vs_ma7_pct ?? Infinity) - Math.abs(b.vs_ma7_pct ?? Infinity),
+    bajista: (a, b) => (a.vs_ma99_pct ?? Infinity) - (b.vs_ma99_pct ?? Infinity),
+    volumen: (a, b) => (b.volumen_24h || 0) - (a.volumen_24h || 0),
+    variacion: (a, b) => (b.var_24h_pct ?? -Infinity) - (a.var_24h_pct ?? -Infinity),
+    simbolo: (a, b) => a.simbolo.localeCompare(b.simbolo),
+  };
+  function maLegend(it, idx, tf) {
+    const [f, m, s] = state.data.medias || [7, 25, 99];
+    let vals = [it.ma7, it.ma25, it.ma99];
+    const sd = seriesData(it, tf);
+    if (sd) {
+      const i = idx == null ? sd.candles.length - 1 : idx;
+      vals = sd.raw.map((arr) => arr[i]);
+    }
+    const wrap = h("div", { class: "ma-legend" });
+    [[f, "c-fast"], [m, "c-mid"], [s, "c-slow"]].forEach(([p, cls], i) => {
+      wrap.append(h("span", null, h("b", { class: cls, text: "MA(" + p + ") " }), fmtPrice(vals[i])));
+    });
+    return wrap;
+  }
+  function tfChips(it) {
+    const row = h("div", { class: "tf-row" }, h("span", { text: "Cumple en" }));
+    for (const tf of intervals()) {
+      const ok = meets(it, tf);
+      row.append(h("span", {
+        class: "tf-chip" + (ok ? " on" : ok == null ? " na" : ""),
+        text: tfLabel(tf),
+        title: ok ? "Se cumple en " + tfLabel(tf) : ok == null ? "Sin datos de " + tfLabel(tf) : "No se cumple en " + tfLabel(tf),
+      }));
+    }
+    return row;
+  }
+  const ICON_EXPAND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>';
+  function card(it, index) {
+    const [f, m, s] = state.data.medias || [7, 25, 99];
+    const expand = h("button", { class: "icon-btn", type: "button", title: "Ampliar", "aria-label": "Ampliar " + it.simbolo });
+    expand.innerHTML = ICON_EXPAND;
+    const chg = it.vela_pct;
+    const mini = h("div", { class: "mini" });
+    mini.dataset.index = String(index);
+    const el = h("article", { class: "card", tabindex: "0", "aria-label": it.simbolo },
+      h("div", { class: "card-head" },
+        h("span", { class: "sym" }, it.base || it.simbolo, h("small", { text: it.quote ? "/" + it.quote : "" })),
+        h("span", { class: "badge", text: MARKET_NAMES[it.mercado] || it.mercado }),
+        expand),
+      h("div", { class: "figures" },
+        h("span", { class: "price", text: fmtPrice(it.precio) }),
+        h("span", { class: "chg " + (chg >= 0 ? "up" : "down"), text: fmtPct(chg) + " vela " + tfLabel(it.intervalo || state.data.intervalo) })),
+      maLegend(it, null, state.tf),
+      mini,
+      tfChips(it),
+      h("div", { class: "card-foot" },
+        h("span", { class: "tf-tag", text: tfLabel(state.data.intervalo), title: "Datos del escaneo en " + tfLabel(state.data.intervalo) }),
+        h("span", null, "vs MA" + f + " ", h("b", { text: fmtPct(it.vs_ma7_pct) })),
+        h("span", null, "Falta ", h("b", { text: fmtGap(gapToMid(it)) }), " a MA" + m),
+        h("span", null, h("b", { text: bars(it) }), (it.velas_sobre_ma7 === 1 ? " vela" : " velas") + " ≥ MA" + f),
+        h("span", null, "Vol ", h("b", { text: fmtVol(it.volumen_24h) }))));
+    el.addEventListener("click", () => openViewer(index));
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openViewer(index); } });
+    return el;
+  }
+  const observer = "IntersectionObserver" in window
+    ? new IntersectionObserver((entries) => {
+        for (const e of entries) if (e.isIntersecting) { observer.unobserve(e.target); createMini(e.target); }
+      }, { rootMargin: "400px 0px" })
+    : null;
+  function renderGrid() {
+    for (const entry of minis.values()) entry.chart.remove();
+    minis.clear();
+    if (observer) observer.disconnect();
+    const grid = $("grid");
+    grid.textContent = "";
+    const q = state.q.trim().toUpperCase();
+    const pool = state.market === "unicas" ? uniqueItems(state.items)
+      : state.items.filter((it) => state.market === "todos" || it.mercado === state.market);
+    state.view = pool
+      .filter((it) => !q || it.simbolo.toUpperCase().includes(q))
+      .sort(SORTS[state.sort] || SORTS.fuerza);
+    state.view.forEach((it, i) => {
+      const el = card(it, i);
+      grid.append(el);
+      const mini = el.querySelector(".mini");
+      if (observer) observer.observe(mini); else createMini(mini);
+    });
+    const empty = $("empty");
+    empty.hidden = state.view.length > 0;
+    empty.textContent = state.items.length === 0
+      ? "Ninguna moneda cumple la condición en este escaneo."
+      : "Ninguna moneda coincide con el filtro.";
+  }
+
+  // ---------- gráficos ----------
+  function chartOptions(t, isBig) {
+    return {
+      autoSize: true,
+      localization: { locale: "es-ES" },
+      layout: { background: { type: "solid", color: t.panel }, textColor: t.muted, fontFamily: t.mono, fontSize: isBig ? 12 : 10, attributionLogo: false },
+      grid: { vertLines: { color: t.grid }, horzLines: { color: t.grid } },
+      rightPriceScale: { borderColor: t.line, entireTextOnly: true, scaleMargins: isBig ? { top: 0.06, bottom: 0.24 } : { top: 0.1, bottom: 0.08 } },
+      timeScale: { borderColor: t.line, timeVisible: true, secondsVisible: false, rightOffset: isBig ? 6 : 2, fixLeftEdge: !isBig },
+      crosshair: isBig ? { mode: LightweightCharts.CrosshairMode.Normal }
+        : { vertLine: { visible: false, labelVisible: false }, horzLine: { visible: false, labelVisible: false } },
+      handleScroll: isBig, handleScale: isBig,
+    };
+  }
+  function applyColors(entry, t) {
+    entry.chart.applyOptions(chartOptions(t, entry.isBig));
+    entry.candles.applyOptions({ upColor: t.up, downColor: t.down, wickUpColor: t.up, wickDownColor: t.down, borderVisible: false });
+    entry.mas.forEach((s, i) => s.applyOptions({ color: t.ma[i] }));
+    if (entry.volume) {
+      const alpha = (c) => c + (c.startsWith("#") && c.length === 7 ? "66" : "");
+      entry.volume.setData(seriesData(entry.item, entry.tf).volume.map((v) => ({ time: v.time, value: v.value, color: alpha(v.up ? t.up : t.down) })));
+    }
+    if (entry.entryLine) entry.entryLine.applyOptions({ color: t.accent });
+    if (entry.marker) entry.candles.setMarkers([Object.assign({}, entry.marker, { color: t.accent })]);
+  }
+  function buildChart(el, it, isBig, tf) {
+    const sd = seriesData(it, tf);
+    if (!window.LightweightCharts || !sd) {
+      el.append(h("div", { class: "placeholder", text: window.LightweightCharts ? "Sin velas de " + tfLabel(tf) + " para esta moneda" : "No se pudo cargar la librería de gráficos" }));
+      return null;
+    }
+    const t = tokens();
+    const chart = LightweightCharts.createChart(el, chartOptions(t, isBig));
+    const d = decimals(it.precio);
+    const priceFormat = { type: "price", precision: d, minMove: Math.pow(10, -d) };
+    const candles = chart.addCandlestickSeries({ priceFormat });
+    candles.setData(sd.candles);
+    const mas = sd.mas.map((data) => {
+      const s = chart.addLineSeries({ lineWidth: isBig ? 2 : 1, priceLineVisible: false, lastValueVisible: isBig, crosshairMarkerVisible: false, priceFormat });
+      s.setData(data);
+      return s;
+    });
+    let volume = null;
+    if (isBig) {
+      volume = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol", lastValueVisible: false, priceLineVisible: false });
+      chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+    }
+    const entry = { chart, candles, mas, volume, item: it, isBig, tf };
+    if (isBig && it._seguimiento) markTracking(entry, sd, rowsFor(it, tf), t);
+    applyColors(entry, t);
+    const n = sd.candles.length;
+    const visible = isBig ? 150 : SIZES[state.size];
+    chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - visible), to: n - 1 + (isBig ? 6 : 2) });
+    return entry;
+  }
+  // En el gráfico de una moneda en seguimiento: línea con el precio de entrada y marca en la vela de ese día.
+  function markTracking(entry, sd, rows, t) {
+    const sg = entry.item._seguimiento;
+    entry.entryLine = entry.candles.createPriceLine({
+      price: sg.precio, color: t.accent, lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed,
+      axisLabelVisible: true, title: "Seguimiento",
+    });
+    const ms = Date.parse(sg.hora);
+    let idx = -1;
+    for (let i = 0; i < rows.length && rows[i][0] <= ms; i++) idx = i;
+    if (idx >= 0) entry.marker = { time: sd.candles[idx].time, position: "belowBar", shape: "arrowUp", text: shortDate(sg.fecha) };
+  }
+  function createMini(el) {
+    const it = state.view[Number(el.dataset.index)];
+    if (!it || minis.has(el)) return;
+    const tf = state.tf;
+    const draw = () => {
+      if (!el.isConnected || minis.has(el) || state.tf !== tf) return;
+      el.textContent = "";
+      const entry = buildChart(el, it, false, tf);
+      if (entry) minis.set(el, entry);
+      refreshCard(el, it);
+    };
+    if (isFresh(it, tf)) { draw(); return; }
+    el.append(h("div", { class: "placeholder", text: "Cargando velas de " + tfLabel(tf) + "…" }));
+    loadCandles(it, tf).then(draw);
+  }
+  // Precio, medias y «Cumple en» de la tarjeta con las velas recién descargadas.
+  function refreshCard(mini, it) {
+    const cardEl = mini.closest(".card");
+    if (!cardEl) return;
+    const legend = cardEl.querySelector(".ma-legend");
+    if (legend) legend.replaceWith(maLegend(it, null, state.tf));
+    const price = cardEl.querySelector(".price");
+    if (price) price.textContent = fmtPrice(it.precio);
+    const chips = cardEl.querySelector(".tf-row");
+    if (chips) chips.replaceWith(tfChips(it));
+  }
+  function refreshTheme() {
+    const t = tokens();
+    for (const entry of minis.values()) applyColors(entry, t);
+    if (big) applyColors(big, t);
+  }
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refreshTheme);
+  new MutationObserver(refreshTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class"] });
+
+  // ---------- visor ampliado ----------
+  function updateLegend(idx) {
+    const it = state.view[state.current];
+    const legend = $("v-legend");
+    legend.replaceWith(Object.assign(maLegend(it, idx, state.vtf), { id: "v-legend" }));
+    const sd = seriesData(it, state.vtf);
+    const c = sd && sd.candles[idx];
+    if (c) {
+      const ohlc = h("span", null);
+      for (const [k, v] of [["A", c.open], ["M", c.high], ["m", c.low], ["C", c.close]]) {
+        ohlc.append(h("b", { text: k + " " }), fmtPrice(v), "  ");
+      }
+      $("v-legend").prepend(ohlc);
+    }
+  }
+  function openViewer(index) {
+    if (!state.view.length) return;
+    index = (index + state.view.length) % state.view.length;
+    const viewer = $("viewer");
+    if (viewer.hidden) { lastFocus = document.activeElement; state.vtf = state.tf; }
+    closeBig();
+    state.current = index;
+    const it = state.view[index];
+    const [f, m, s] = state.data.medias || [7, 25, 99];
+    $("v-sym").textContent = "";
+    $("v-sym").append(it.base || it.simbolo, h("small", { text: it.quote ? "/" + it.quote : "" }));
+    $("v-badge").textContent = MARKET_NAMES[it.mercado] || it.mercado;
+    $("v-price").textContent = fmtPrice(it.precio);
+    const chg = $("v-chg");
+    chg.textContent = it.vela_pct == null ? "" : fmtPct(it.vela_pct) + " vela " + tfLabel(it.intervalo || state.data.intervalo);
+    chg.className = "chg " + (it.vela_pct >= 0 ? "up" : "down");
+    const stats = $("v-stats");
+    stats.textContent = "";
+    if (it._seguimiento) {
+      trackStats(it, index);
+    } else {
+      stats.append(
+        h("span", { class: "tf-tag", text: tfLabel(state.data.intervalo), title: "Datos del escaneo en " + tfLabel(state.data.intervalo) }),
+        h("span", null, "vs MA" + f + " ", h("b", { text: fmtPct(it.vs_ma7_pct) })),
+        h("span", null, "Falta ", h("b", { text: fmtGap(gapToMid(it)) }), " a MA" + m),
+        h("span", null, h("b", { text: bars(it) }), (it.velas_sobre_ma7 === 1 ? " vela" : " velas") + " ≥ MA" + f),
+        h("span", null, "Vol 24h ", h("b", { text: fmtVol(it.volumen_24h) })),
+        it.var_24h_pct == null ? null : h("span", null, "24h ", h("b", { class: it.var_24h_pct >= 0 ? "up" : "down", text: fmtPct(it.var_24h_pct) })),
+        h("span", null, h("b", { text: (index + 1) + "/" + state.view.length })));
+    }
+    const link = $("v-link");
+    link.hidden = !!state.data.ejemplo;
+    link.href = binanceUrl(it);
+    viewer.hidden = false;
+    document.body.classList.add("viewing");
+    drawBig(it, index);
+    $("v-close").focus({ preventScroll: true });
+  }
+  // Datos del seguimiento en la cabecera del visor, con la variación al precio más reciente.
+  function trackStats(it, index) {
+    const sg = it._seguimiento;
+    const pct = it.precio && sg.precio ? (it.precio - sg.precio) / sg.precio * 100 : null;
+    const stats = $("v-stats");
+    stats.textContent = "";
+    stats.append(
+      h("span", { class: "tf-tag", text: "Seguimiento " + dayTitle(sg.fecha) }),
+      h("span", null, "Precio entonces ", h("b", { text: fmtPrice(sg.precio) })),
+      pct == null ? null : h("span", null, "Variación ", h("b", { class: pct >= 0 ? "up" : "down", text: fmtPct(pct) })),
+      h("span", null, h("b", { text: (index + 1) + "/" + state.view.length })));
+  }
+  function drawBig(it, index) {
+    const tf = state.vtf, el = $("big");
+    // Elegir una temporalidad en el visor siempre vuelve a pedir las velas.
+    const pickTf = (next) => { state.vtf = next; if (it._fresh) delete it._fresh[next]; drawBig(it, index); };
+    const render = () => {
+      if ($("viewer").hidden || state.current !== index || state.vtf !== tf) return;
+      closeBig();
+      el.textContent = "";
+      tfButtons($("v-tf"), tf, pickTf, it);
+      $("v-price").textContent = fmtPrice(it.precio);
+      if (it._seguimiento) trackStats(it, index);
+      big = buildChart(el, it, true, tf);
+      const sd = seriesData(it, tf);
+      const last = sd ? sd.candles.length - 1 : -1;
+      updateLegend(last);
+      if (big) {
+        big.chart.subscribeCrosshairMove((p) => {
+          const idx = p && p.logical != null ? Math.round(p.logical) : last;
+          updateLegend(idx >= 0 && idx <= last ? idx : last);
+        });
+      }
+    };
+    tfButtons($("v-tf"), tf, pickTf, it);
+    if (isFresh(it, tf)) { render(); return; }
+    closeBig();
+    el.textContent = "";
+    el.append(h("div", { class: "placeholder", text: "Cargando velas de " + tfLabel(tf) + "…" }));
+    loadCandles(it, tf).then(render);
+  }
+  function closeBig() {
+    if (big) { big.chart.remove(); big = null; }
+  }
+  function closeViewer() {
+    closeBig();
+    $("viewer").hidden = true;
+    document.body.classList.remove("viewing");
+    if (state.trackSaved) {  // el visor se abrió desde el seguimiento: vuelve el escáner a como estaba
+      Object.assign(state, state.trackSaved);
+      state.trackSaved = null;
+    }
+    const target = lastFocus && document.contains(lastFocus) ? lastFocus : $("grid").children[state.current];
+    if (target) target.focus({ preventScroll: false });
   }
   function zoom(factor) {
-    const ts = chart.timeScale();
+    if (!big) return;
+    const ts = big.chart.timeScale();
     const r = ts.getVisibleLogicalRange();
     if (!r) return;
-    const span = Math.min(Math.max((r.to - r.from) * factor, 12), rows.length + 40);
-    ts.setVisibleLogicalRange({ from: r.to - span, to: r.to });
+    const n = seriesData(big.item, big.tf).candles.length;
+    const width = Math.min(n + 40, Math.max(12, (r.to - r.from) * factor));
+    ts.setVisibleLogicalRange({ from: r.to - width, to: r.to });
   }
-  $("zoomIn").addEventListener("click", () => zoom(0.6));
-  $("zoomOut").addEventListener("click", () => zoom(1.6));
-  $("fit").addEventListener("click", () => chart.timeScale().fitContent());
-  $("reset").addEventListener("click", showLatest);
-
-  const viewer = $("viewer");
-  const fullBtn = $("full");
-  if (!document.fullscreenEnabled) fullBtn.hidden = true;
-  function toggleFull() {
-    if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
-    if (viewer.requestFullscreen) viewer.requestFullscreen().catch(() => { fullBtn.hidden = true; });
-  }
-  fullBtn.addEventListener("click", toggleFull);
-  document.addEventListener("fullscreenchange", () => {
-    const on = document.fullscreenElement === viewer;
-    fullBtn.textContent = on ? "Salir de pantalla completa" : "Pantalla completa";
-    fullBtn.setAttribute("aria-pressed", String(on));
-  });
-
-  // ---------- selección ----------
-  function renderHeader() {
-    const p = pairs[current];
-    $("vMkt").textContent = p.mercado;
-    $("vSym").textContent = p.par;
-    $("vPrice").textContent = fmtPrice(p.precio, decimalsFor(p.precio)) + " " + (p.cotizacion || DATA.cotizacion);
-    const link = $("vLink");
-    if (/^https:\/\/www\.binance\.com\//.test(p.url || "")) { link.href = p.url; link.hidden = false; } else { link.hidden = true; }
-    const stats = $("vStats");
-    stats.textContent = "";
-    const items = [
-      ["Vela 1D", fmtPct(p.vela_pct), signClass(p.vela_pct)],
-      ["Precio vs MA(7)", fmtPct(p.vs_ma7_pct), signClass(p.vs_ma7_pct)],
-      ["MA(7) vs MA(25)", fmtPct(p.ma7_vs_ma25_pct), ""],
-      ["Precio vs MA(99)", fmtPct(p.vs_ma99_pct), ""],
-      ["Días sobre MA(7)", String(p.dias_sobre_ma7), ""],
-      ["Volumen 1D", fmtVol(p.volumen_1d) + " " + (p.cotizacion || DATA.cotizacion), ""],
-    ];
-    for (const [k, v, cls] of items) {
-      const d = el("div");
-      d.append(el("dt", null, k), el("dd", cls, v));
-      stats.append(d);
-    }
-    pairButtons.forEach((b, i) => b.setAttribute("aria-current", String(i === current)));
-  }
-
-  function select(i) {
-    current = (i + pairs.length) % pairs.length;
-    renderHeader();
-    load();
-    pairButtons[current].scrollIntoView({ block: "nearest", inline: "nearest" });
-    try { history.replaceState(null, "", "#" + pairId(pairs[current])); } catch (e) { /* sin historial */ }
-  }
-  function setInterval_(iv) {
-    interval = iv;
-    store.set("momento.intervalo", iv);
-    intervalButtons.forEach((b, i) => b.setAttribute("aria-pressed", String(DATA.intervalos[i] === iv)));
-    load();
-  }
-
+  $("v-close").addEventListener("click", closeViewer);
+  $("v-prev").addEventListener("click", () => openViewer(state.current - 1));
+  $("v-next").addEventListener("click", () => openViewer(state.current + 1));
+  $("v-in").addEventListener("click", () => zoom(0.7));
+  $("v-out").addEventListener("click", () => zoom(1.45));
+  $("v-fit").addEventListener("click", () => big && big.chart.timeScale().fitContent());
   document.addEventListener("keydown", (e) => {
-    if (e.altKey || e.ctrlKey || e.metaKey) return;
-    const k = e.key;
-    if (k === "ArrowDown") { e.preventDefault(); select(current + 1); }
-    else if (k === "ArrowUp") { e.preventDefault(); select(current - 1); }
-    else if (/^[1-9]$/.test(k) && DATA.intervalos[+k - 1]) setInterval_(DATA.intervalos[+k - 1]);
-    else if (k === "+" || k === "=") zoom(0.6);
-    else if (k === "-" || k === "_") zoom(1.6);
-    else if (k === "0") chart.timeScale().fitContent();
-    else if (k === "r" || k === "R") showLatest();
-    else if (k === "f" || k === "F") toggleFull();
+    if ($("viewer").hidden || e.altKey || e.ctrlKey || e.metaKey) return;
+    const keys = { Escape: closeViewer, ArrowLeft: () => openViewer(state.current - 1), ArrowRight: () => openViewer(state.current + 1),
+      "+": () => zoom(0.7), "=": () => zoom(0.7), "-": () => zoom(1.45), "0": () => big && big.chart.timeScale().fitContent() };
+    if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
   });
 
-  const scheme = window.matchMedia("(prefers-color-scheme: light)");
-  if (scheme.addEventListener) scheme.addEventListener("change", applyTheme);
-  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  // ---------- controles ----------
+  $("sort").addEventListener("change", (e) => { state.sort = e.target.value; store.set("sort", state.sort); renderGrid(); });
+  $("search").addEventListener("input", (e) => { state.q = e.target.value; renderGrid(); });
+  function setSize(size) {
+    state.size = SIZES[size] ? size : "m";
+    $("grid").className = "grid scan-only size-" + state.size;
+    for (const b of $("size").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.size === state.size));
+    store.set("size", state.size);
+    for (const [el, entry] of minis) {
+      const n = seriesData(entry.item, entry.tf).candles.length;
+      entry.chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - SIZES[state.size]), to: n + 1 });
+    }
+  }
+  for (const b of $("size").querySelectorAll("button")) b.addEventListener("click", () => setSize(b.dataset.size));
 
-  function showNotice(msg) { const n = $("notice"); n.textContent = msg; n.hidden = false; }
+  async function loadFile(file) {
+    if (!file) return;
+    try {
+      setData(parsePayload(await file.text()));
+    } catch (err) {
+      const reason = err && err.message ? err.message.charAt(0).toUpperCase() + err.message.slice(1) : "Formato desconocido";
+      renderNotice("No se pudo cargar el archivo. ", reason + ". Usa el .html o el .json que genera el scanner.", true);
+    }
+  }
+  $("load").addEventListener("click", () => $("file").click());
+  $("file").addEventListener("change", (e) => { loadFile(e.target.files[0]); e.target.value = ""; });
+  document.addEventListener("dragover", (e) => { e.preventDefault(); document.body.classList.add("dragging"); });
+  document.addEventListener("dragleave", (e) => { if (!e.relatedTarget) document.body.classList.remove("dragging"); });
+  document.addEventListener("drop", (e) => {
+    e.preventDefault();
+    document.body.classList.remove("dragging");
+    loadFile(e.dataTransfer && e.dataTransfer.files[0]);
+  });
 
-  applyTheme();
-  intervalButtons.forEach((b, i) => b.setAttribute("aria-pressed", String(DATA.intervalos[i] === interval)));
-  select(current);
+  // ---------- escáner en el navegador ----------
+  // Las peticiones salen desde el navegador de quien usa la página, con su conexión:
+  // así no hace falta ningún servidor y Binance no ve una IP de la nube.
+  const SCAN_PERIODS = [7, 25, 99];
+  const SCAN_LIMIT = 150;   // velas para evaluar las medias (99 + margen para ver el cruce)
+  const CHART_LIMIT = 299;  // velas de cada gráfico
+  const CHART_TFS = ["2h", "4h", "8h", "12h", "1d"];
+  const TF_MINUTES = { "1m": 1, "3m": 3, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "2h": 120, "4h": 240, "6h": 360, "8h": 480,
+    "12h": 720, "1d": 1440, "3d": 4320, "1w": 10080, "1M": 43200 };
+  const STABLES = new Set(["USDT", "USDC", "FDUSD", "TUSD", "USDP", "DAI", "BUSD", "USDS", "USDE", "PYUSD", "USD1", "RLUSD", "XUSD", "BFUSD", "EUR", "EURI", "AEUR", "GBP"]);
+  const NON_CRYPTO = new Set(["INDEX", "COMMODITY", "EQUITY", "STOCK", "FOREX"]);
+  const PRODUCTS_URL = "https://www.binance.com/bapi/asset/v2/public/asset-service/product/get-products?includeEtf=true";
+  const API = {
+    spot: { nombre: "Spot", bases: ["https://api.binance.com", "https://data-api.binance.vision"], info: "/api/v3/exchangeInfo",
+      klines: "/api/v3/klines", ticker: "/api/v3/ticker/24hr", price: "/api/v3/ticker/price", limit: 6000,
+      infoW: 20, tickerW: 80, priceW: 4, klinesW: () => 2 },
+    futures: { nombre: "Futures USDⓈ-M", bases: ["https://fapi.binance.com"], info: "/fapi/v1/exchangeInfo",
+      klines: "/fapi/v1/klines", ticker: "/fapi/v1/ticker/24hr", price: "/fapi/v1/ticker/price", limit: 2400,
+      infoW: 1, tickerW: 40, priceW: 2,
+      klinesW: (n) => (n < 100 ? 1 : n < 500 ? 2 : n <= 1000 ? 5 : 10) },
+  };
+  class ScanError extends Error {
+    constructor(message, fatal) { super(message); this.fatal = !!fatal; }
+  }
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const hostOf = (url) => url.replace(/^https?:\/\//, "");
+  const num = (v) => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+  const row = (k) => [Number(k[0]), +k[1], +k[2], +k[3], +k[4], +k[5]];
+
+  class BinanceApi {
+    constructor(cfg, signal) { this.cfg = cfg; this.signal = signal; this.base = null; this.minute = 0; this.used = 0; this.budget = cfg.limit * 0.8; }
+    async reserve(weight) {  // reparte el peso por minuto que permite Binance
+      for (;;) {
+        const now = Date.now(), minute = Math.floor(now / 60000);
+        if (minute !== this.minute) { this.minute = minute; this.used = 0; }
+        if (this.used + weight <= this.budget || this.used === 0) { this.used += weight; return; }
+        await sleep((minute + 1) * 60000 - now + 250);
+      }
+    }
+    async get(path, params, weight) {
+      const qs = params ? "?" + new URLSearchParams(params) : "";
+      const bases = this.base ? [this.base] : this.cfg.bases;
+      let lastError = null;
+      for (const base of bases) {
+        for (let attempt = 0; attempt < 4; attempt++) {
+          if (this.signal.aborted) throw new ScanError("Escaneo detenido.", true);
+          await this.reserve(weight);
+          let resp;
+          try {
+            resp = await fetch(base + path + qs, { signal: this.signal, cache: "no-store" });
+          } catch (err) {
+            if (this.signal.aborted) throw new ScanError("Escaneo detenido.", true);
+            lastError = new ScanError("El navegador no pudo conectar con " + hostOf(base) +
+              " (sin conexión, bloqueo del navegador o página abierta dentro de Claude, que no permite conexiones externas).", true);
+            if (!this.base) break;  // todavía probando direcciones: pasa a la siguiente
+            await sleep(1000 * 2 ** attempt);
+            continue;
+          }
+          if (resp.ok) { this.base = base; return resp.json(); }
+          if (resp.status === 429) { lastError = new ScanError("Binance pidió esperar (429)."); await sleep(60000); continue; }
+          if (resp.status === 418) throw new ScanError("Binance ha bloqueado temporalmente tu IP por exceso de peticiones (418). Espera unos minutos.", true);
+          if (resp.status === 451 || resp.status === 403) {
+            lastError = new ScanError("Binance rechaza las peticiones desde tu ubicación (" + resp.status + ") en " + hostOf(base) + ".", true);
+            break;
+          }
+          if (resp.status >= 500) { lastError = new ScanError("Error " + resp.status + " de Binance."); await sleep(1000 * 2 ** attempt); continue; }
+          throw new ScanError("Error " + resp.status + " en " + path + ".");
+        }
+      }
+      throw lastError || new ScanError("Binance no respondió.", true);
+    }
+  }
+  // ---------- velas en vivo para los gráficos ----------
+  const liveApis = {}, liveDown = {}, pendingCandles = new Map();
+  const NEVER = new AbortController().signal;
+  function isFresh(it, tf) { return !!rowsFor(it, tf) && !!it._fresh && it._fresh[tf] >= state.freshSince; }
+  // Descarga las velas de una moneda en esa temporalidad. Si no se puede (sin conexión, dentro de
+  // Claude, datos de ejemplo), el gráfico usa las velas que ya traía el informe.
+  function loadCandles(it, tf) {
+    const cfg = API[it.mercado];
+    if (!cfg || state.data.ejemplo || isFresh(it, tf) || Date.now() - (liveDown[it.mercado] || 0) < 60000) {
+      return Promise.resolve(isFresh(it, tf));
+    }
+    const key = it.mercado + ":" + it.simbolo + ":" + tf;
+    if (!pendingCandles.has(key)) {
+      const api = liveApis[it.mercado] || (liveApis[it.mercado] = new BinanceApi(cfg, NEVER));
+      pendingCandles.set(key, api.get(cfg.klines, { symbol: it.simbolo, interval: tf, limit: CHART_LIMIT }, cfg.klinesW(CHART_LIMIT))
+        .then((rows) => {
+          const data = rows.map(row);
+          if (!data.length) return false;
+          if (tf === state.data.intervalo) it.velas = data; else (it.graficos = it.graficos || {})[tf] = data;
+          if (it._sd) delete it._sd[tf];
+          (it._fresh = it._fresh || {})[tf] = Date.now();
+          it.precio = data[data.length - 1][4];
+          return true;
+        })
+        .catch((err) => { if (err && err.fatal) liveDown[it.mercado] = Date.now(); return false; })
+        .finally(() => pendingCandles.delete(key)));
+    }
+    return pendingCandles.get(key);
+  }
+  async function runPool(items, size, worker) {
+    let next = 0, failure = null;
+    async function lane() {
+      while (!failure && next < items.length) {
+        const i = next++;
+        try { await worker(items[i], i); } catch (err) { failure = failure || err; }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(size, items.length) }, lane));
+    if (failure) throw failure;
+  }
+  // rows: [apertura ms, open, high, low, close, volumen]. Devuelve los datos de la señal o null.
+  function evaluateRows(rows, crit) {
+    const [fp, mp, sp] = SCAN_PERIODS;
+    if (rows.length < sp) return null;
+    const closes = rows.map((k) => k[4]);
+    const f = sma(closes, fp), m = sma(closes, mp), s = sma(closes, sp);
+    const i = closes.length - 1, last = rows[i];
+    if (!passes(last[1], last[4], f[i], m[i], s[i], crit)) return null;
+    let bars = 0;  // velas seguidas (incluida la última) cerrando por encima o en la MA7
+    for (let j = i; j >= 0 && f[j] != null && closes[j] >= f[j]; j--) bars++;
+    const pct = (a, b) => (a - b) / b * 100;
+    return { close: last[4], velaPct: pct(last[4], last[1]), ma7: f[i], ma25: m[i], ma99: s[i],
+      vsMa7: pct(last[4], f[i]), gap: pct(f[i], m[i]), vsMa99: pct(last[4], s[i]), bars };
+  }
+  const isStockTags = (tags) => (tags || []).some((t) => typeof t === "string" && t.toLowerCase().includes("stock"));
+  async function loadStockList() {
+    // 1) lista de productos de Binance; 2) copia publicada junto a la web (bstocks.json)
+    try {
+      const resp = await fetch(PRODUCTS_URL, { cache: "no-store" });
+      if (resp.ok) {
+        const set = new Set(((await resp.json()).data || []).filter((p) => p && isStockTags(p.tags)).map((p) => p.s));
+        if (set.size) return set;
+      }
+    } catch (err) { /* la web de Binance no permite consultarla desde otras páginas */ }
+    try {
+      const resp = await fetch("bstocks.json", { cache: "no-store" });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data.simbolos) && data.simbolos.length) return new Set(data.simbolos);
+      }
+    } catch (err) { /* sin copia local */ }
+    return null;
+  }
+  async function scanMarket(key, opts, report, signal) {
+    const cfg = API[key];
+    const api = new BinanceApi(cfg, signal);
+    const notes = [];
+    report(cfg.nombre + ": preparando…");
+    const info = await api.get(cfg.info, null, cfg.infoW);
+    for (const r of info.rateLimits || []) {
+      if (r.rateLimitType === "REQUEST_WEIGHT" && r.interval === "MINUTE" && r.intervalNum === 1) api.budget = r.limit * 0.8;
+    }
+    let symbols = (info.symbols || []).filter((s) => s.status === "TRADING" && s.quoteAsset === opts.quote && !STABLES.has(s.baseAsset) &&
+      (key === "spot" ? s.isSpotTradingAllowed !== false : s.contractType === "PERPETUAL" && !NON_CRYPTO.has(s.underlyingType)));
+    if (key === "spot") {
+      const stocks = await loadStockList();
+      if (stocks) symbols = symbols.filter((s) => !stocks.has(s.symbol));
+      else notes.push("no se pudo saber qué pares son acciones tokenizadas (bStocks), así que pueden aparecer");
+    }
+    const tickers = new Map((await api.get(cfg.ticker, null, cfg.tickerW)).map((t) => [t.symbol, t]));
+    const candidates = symbols.map((s) => {
+      const t = tickers.get(s.symbol) || {};
+      return { info: s, volume: num(t.quoteVolume), change: num(t.priceChangePercent) };
+    }).filter((c) => !(opts.minVolume > 0) || (c.volume || 0) >= opts.minVolume);
+
+    const matches = [];
+    let analyzed = 0, done = 0, failed = 0;
+    await runPool(candidates, 8, async (c) => {
+      try {
+        const rows = (await api.get(cfg.klines, { symbol: c.info.symbol, interval: opts.interval, limit: SCAN_LIMIT }, cfg.klinesW(SCAN_LIMIT))).map(row);
+        if (rows.length >= SCAN_PERIODS[2]) {
+          analyzed++;
+          const ev = evaluateRows(rows, opts.crit);
+          if (ev) matches.push({ c, ev, rows, charts: {} });
+        }
+      } catch (err) {
+        if (err.fatal) throw err;
+        failed++;
+      } finally {
+        report(cfg.nombre + ": " + (++done) + "/" + candidates.length + " pares");
+      }
+    });
+    if (failed) notes.push(failed + " pares no respondieron");
+
+    const tfs = [...new Set([...CHART_TFS, opts.interval])];
+    const jobs = matches.flatMap((m) => tfs.map((tf) => [m, tf]));
+    let charted = 0;
+    try {
+      await runPool(jobs, 8, async ([m, tf]) => {
+        try {
+          const rows = await api.get(cfg.klines, { symbol: m.c.info.symbol, interval: tf, limit: CHART_LIMIT }, cfg.klinesW(CHART_LIMIT));
+          if (rows.length) m.charts[tf] = rows.map(row);
+        } catch (err) {
+          if (err.fatal) throw err;
+        } finally {
+          report(cfg.nombre + ": gráficos " + (++charted) + "/" + jobs.length);
+        }
+      });
+    } catch (err) {
+      if (signal.aborted) throw err;
+      notes.push("faltan gráficos en otras temporalidades (" + err.message + ")");
+    }
+
+    const coincidencias = matches.map(({ c, ev, rows, charts }) => {
+      const graficos = {};
+      for (const [tf, data] of Object.entries(charts)) if (tf !== opts.interval) graficos[tf] = data;
+      return {
+        mercado: key, intervalo: opts.interval, simbolo: c.info.symbol, base: c.info.baseAsset, quote: c.info.quoteAsset,
+        precio: ev.close, vela_pct: ev.velaPct, ma7: ev.ma7, ma25: ev.ma25, ma99: ev.ma99,
+        vs_ma7_pct: ev.vsMa7, ma7_vs_ma25_pct: ev.gap, vs_ma99_pct: ev.vsMa99, velas_sobre_ma7: ev.bars,
+        var_24h_pct: c.change, volumen_24h: c.volume, velas: charts[opts.interval] || rows, graficos,
+      };
+    });
+    return { market: { nombre: cfg.nombre, quote: opts.quote, analizadas: analyzed, coincidencias }, notes };
+  }
+  let scanController = null;
+  async function startScan(event) {
+    event.preventDefault();
+    if (scanController) { scanController.abort(); return; }
+    const tolerance = parseFloat($("scan-tol").value);
+    const opts = {
+      market: $("scan-market").value, interval: $("scan-interval").value, quote: "USDT",
+      minVolume: Math.max(0, parseFloat($("scan-minvol").value) || 0), track: $("scan-track").checked,
+      tolerance: isFinite(tolerance) && tolerance >= 0 ? tolerance : DEFAULT_CRIT.tolerancia,
+      ma99: $("scan-ma99").checked, green: $("scan-green").checked,
+    };
+    opts.crit = { tolerancia: opts.tolerance, max_encima: null, ma99: opts.ma99, verde: opts.green, min_volumen: opts.minVolume };
+    store.set("scan", JSON.stringify(opts));
+    const keys = opts.market === "ambos" ? ["spot", "futures"] : [opts.market];
+    const go = $("scan-go"), status = $("scan-status");
+    scanController = new AbortController();
+    go.textContent = "Detener";
+    const progress = {};
+    const report = (key) => (text) => { progress[key] = text; status.textContent = Object.values(progress).join(" · "); };
+    const settled = await Promise.allSettled(keys.map((k) => scanMarket(k, opts, report(k), scanController.signal)));
+    const aborted = scanController.signal.aborted;
+    scanController = null;
+    go.textContent = "Escanear";
+    const mercados = {}, problems = [];
+    settled.forEach((res, i) => {
+      const name = API[keys[i]].nombre;
+      if (res.status === "fulfilled") {
+        mercados[keys[i]] = res.value.market;
+        for (const n of res.value.notes) problems.push(name + ": " + n + ".");
+      } else {
+        problems.push(name + ": " + (res.reason && res.reason.message || "error desconocido"));
+      }
+    });
+    if (aborted) { status.textContent = "Escaneo detenido."; return; }
+    const done = "Escaneo terminado " + new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) + ".";
+    status.textContent = done;
+    const fecha = opts.track ? recordScan(mercados, opts.interval) : null;
+    if (fecha) {
+      const saved = done + " Guardado en «Seguimiento " + dayTitle(fecha) + "»";
+      status.textContent = saved + (ghConfig() ? "; subiendo a GitHub…" : " de este navegador.");
+      if (ghConfig()) {
+        syncPending().then((ok) => {
+          status.textContent = saved + (ok ? " y en GitHub." : ". No se pudo subir a GitHub; se reintentará (ver Seguimiento).");
+        });
+      }
+    }
+    if (Object.keys(mercados).length) {
+      const tfs = [...new Set([...CHART_TFS, opts.interval])].sort((a, b) => (TF_MINUTES[a] || 0) - (TF_MINUTES[b] || 0));
+      setData({
+        generado: new Date().toISOString(), intervalo: opts.interval, intervalos_grafico: tfs, medias: SCAN_PERIODS,
+        criterios: opts.crit, solo_cerradas: false, orden: state.sort, ejemplo: false, mercados,
+      }, true);
+    }
+    if (problems.length) renderNotice("Aviso. ", problems.join(" "), !Object.keys(mercados).length);
+  }
+  $("scan-form").addEventListener("submit", startScan);
+  try {
+    const saved = JSON.parse(store.get("scan") || "null");
+    if (saved) {
+      if (saved.market) $("scan-market").value = saved.market;
+      if (saved.interval) $("scan-interval").value = saved.interval;
+      if (saved.minVolume != null) $("scan-minvol").value = saved.minVolume;
+      if (saved.tolerance != null) $("scan-tol").value = saved.tolerance;
+      if (saved.ma99 === false) $("scan-ma99").checked = false;
+      if (saved.green === false) $("scan-green").checked = false;
+      if (saved.track === false) $("scan-track").checked = false;
+    }
+  } catch (err) { /* preferencias no válidas */ }
+
+  // ---------- seguimiento ----------
+  // Cada escaneo guarda las monedas encontradas con su precio en «Seguimiento <día>». Se guarda en este
+  // navegador y, si se conecta, también en el repositorio de GitHub (docs/seguimiento/AAAA-MM-DD.json).
+  // La web publicada lee todos los días de seguimiento.json, que el workflow «Web» genera con esos archivos.
+  const TRACK_CTX = { intervalo: "1d", intervalos_grafico: CHART_TFS, medias: SCAN_PERIODS, criterios: DEFAULT_CRIT, solo_cerradas: false, ejemplo: false, mercados: {} };
+  const TRACK_SORTS = {
+    subida: (a, b) => (b.pct ?? -Infinity) - (a.pct ?? -Infinity),
+    bajada: (a, b) => (a.pct ?? Infinity) - (b.pct ?? Infinity),
+    moneda: (a, b) => a.simbolo.localeCompare(b.simbolo),
+    escaneo: (a, b) => a.orden - b.orden,
+  };
+  const track = { remote: {}, prices: {}, market: "todos", sort: "subida", timer: null, sync: "", syncError: "", busy: false };
+  const GH_API = "https://api.github.com";
+  class GhError extends Error {
+    constructor(status, message) { super(message); this.status = status; }
+  }
+  function readJSON(key, fallback) {
+    try { const v = JSON.parse(store.get(key) || "null"); return v == null ? fallback : v; } catch (err) { return fallback; }
+  }
+  const localDays = () => readJSON("seguimiento", {});
+  const saveLocalDays = (days) => store.set("seguimiento", JSON.stringify(days));
+  const deletedDays = () => readJSON("seguimiento-borrados", {});
+  const saveDeletedDays = (days) => store.set("seguimiento-borrados", JSON.stringify(days));
+  function todayKey(d = new Date()) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function dayDate(fecha) { const [y, m, d] = fecha.split("-").map(Number); return new Date(y, m - 1, d); }
+  function dayTitle(fecha) {
+    const date = dayDate(fecha);
+    const text = date.toLocaleDateString("es-ES", { day: "numeric", month: "long" });
+    return date.getFullYear() === new Date().getFullYear() ? text : text + " de " + date.getFullYear();
+  }
+  function shortDate(fecha) { return dayDate(fecha).toLocaleDateString("es-ES", { day: "numeric", month: "short" }); }
+  function daysAgo(fecha) {
+    const n = Math.round((dayDate(todayKey()) - dayDate(fecha)) / 86400000);
+    return n <= 0 ? "hoy" : n === 1 ? "ayer" : "hace " + n + " días";
+  }
+  const timeOf = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }); };
+  const coinKey = (c) => c.mercado + ":" + c.simbolo;
+  // Une dos versiones del mismo día: cada moneda una vez, con el primer precio en que apareció.
+  function mergeDay(a, b) {
+    const coins = new Map();
+    for (const c of [...((a && a.monedas) || []), ...((b && b.monedas) || [])]) {
+      if (!c || !c.simbolo || !c.mercado) continue;
+      const prev = coins.get(coinKey(c));
+      if (!prev || String(c.hora) < String(prev.hora)) coins.set(coinKey(c), c);
+    }
+    return { fecha: (a || b).fecha, monedas: [...coins.values()] };
+  }
+  function cleanDay(day) {
+    return { fecha: day.fecha, monedas: day.monedas.map((c) => ({ mercado: c.mercado, simbolo: c.simbolo, base: c.base,
+      quote: c.quote, precio: c.precio, hora: c.hora, intervalo: c.intervalo })) };
+  }
+  function allDays() {
+    const local = localDays(), deleted = deletedDays(), out = {};
+    for (const [fecha, day] of Object.entries(track.remote)) if (!deleted[fecha]) out[fecha] = day;
+    for (const [fecha, day] of Object.entries(local)) out[fecha] = out[fecha] ? mergeDay(out[fecha], day) : day;
+    return Object.values(out).filter((d) => d.monedas && d.monedas.length).sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+  }
+  function recordScan(mercados, interval) {
+    const now = new Date(), fecha = todayKey(now), hora = now.toISOString();
+    const monedas = [];
+    for (const m of Object.values(mercados)) {
+      for (const c of m.coincidencias || []) {
+        monedas.push({ mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c.precio, hora, intervalo: interval });
+      }
+    }
+    if (!monedas.length) return null;
+    const days = localDays();
+    days[fecha] = Object.assign(mergeDay(days[fecha], { fecha, monedas }), { pendiente: true });
+    // Si el navegador se queda sin espacio, se olvidan primero los días más antiguos que ya están en GitHub
+    // y, si no basta, los más antiguos de todos (el de hoy nunca).
+    const order = Object.keys(days).filter((f) => f !== fecha).sort((a, b) => (days[a].pendiente - days[b].pendiente) || (a < b ? -1 : 1));
+    while (order.length && JSON.stringify(days).length > 2500000) delete days[order.shift()];
+    saveLocalDays(days);
+    const deleted = deletedDays();
+    if (deleted[fecha]) { delete deleted[fecha]; saveDeletedDays(deleted); }
+    return fecha;
+  }
+
+  // GitHub: la clave se guarda solo en este navegador y solo se envía a api.github.com.
+  function ghConfig() { const c = readJSON("github", null); return c && c.token && c.owner && c.repo ? c : null; }
+  function ghMessage(status, detail) {
+    if (status === 401) return "la clave de GitHub no es válida o ha caducado";
+    if (status === 403) return "la clave no tiene permiso para escribir (Contents: Read and write)";
+    if (status === 404) return "no se encuentra el repositorio o la clave no tiene acceso a él";
+    return "GitHub respondió " + status + (detail ? " (" + detail + ")" : "");
+  }
+  async function gh(cfg, method, path, body) {
+    const headers = { Accept: "application/vnd.github+json", Authorization: "Bearer " + cfg.token, "X-GitHub-Api-Version": "2022-11-28" };
+    if (body) headers["Content-Type"] = "application/json";
+    let resp;
+    try {
+      resp = await fetch(GH_API + path, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: "no-store" });
+    } catch (err) {
+      throw new GhError(0, "no hay conexión con GitHub");
+    }
+    if (method === "GET" && resp.status === 404) return null;
+    if (!resp.ok) {
+      let detail = "";
+      try { detail = (await resp.json()).message || ""; } catch (err) { /* sin detalle */ }
+      throw new GhError(resp.status, ghMessage(resp.status, detail));
+    }
+    return resp.status === 204 ? null : resp.json();
+  }
+  const b64encode = (text) => { let bin = ""; for (const byte of new TextEncoder().encode(text)) bin += String.fromCharCode(byte); return btoa(bin); };
+  const b64decode = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\s/g, "")), (ch) => ch.charCodeAt(0)));
+  const dayFile = (cfg, fecha) => "/repos/" + encodeURIComponent(cfg.owner) + "/" + encodeURIComponent(cfg.repo) + "/contents/docs/seguimiento/" + fecha + ".json";
+  async function pushDay(cfg, day) {
+    const path = dayFile(cfg, day.fecha);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const current = await gh(cfg, "GET", path + "?ref=" + encodeURIComponent(cfg.branch));
+      let merged = day;
+      if (current && current.content) {
+        try { merged = mergeDay(JSON.parse(b64decode(current.content)), day); } catch (err) { /* archivo dañado: se reemplaza */ }
+      }
+      merged = cleanDay(merged);
+      const body = { message: "Seguimiento " + day.fecha + " (" + merged.monedas.length + " monedas)",
+        content: b64encode(JSON.stringify(merged, null, 1) + "\n"), branch: cfg.branch };
+      if (current) body.sha = current.sha;
+      try {
+        await gh(cfg, "PUT", path, body);
+        return merged;
+      } catch (err) {
+        if (err.status !== 409 && err.status !== 422) throw err;  // otro dispositivo guardó a la vez: se vuelve a unir
+      }
+    }
+    throw new GhError(409, "otro dispositivo estaba guardando a la vez");
+  }
+  let syncing = null;
+  function syncPending() {
+    const cfg = ghConfig();
+    if (!cfg) return Promise.resolve(false);
+    if (syncing) return syncing.then(() => syncPending());
+    syncing = (async () => {
+      const pending = Object.values(localDays()).filter((d) => d.pendiente);
+      if (!pending.length) return true;
+      track.busy = true;
+      track.sync = "Subiendo a GitHub…";
+      track.syncError = "";
+      renderSync();
+      try {
+        for (const day of pending) {
+          const merged = await pushDay(cfg, day);
+          const days = localDays();
+          const now = days[day.fecha];
+          if (now) {
+            // Si mientras tanto se escaneó otra vez ese día, queda pendiente para la próxima subida.
+            const changed = now.monedas.length !== day.monedas.length;
+            days[day.fecha] = Object.assign(mergeDay(merged, now), { pendiente: changed });
+            saveLocalDays(days);
+          }
+        }
+        track.sync = "Subido a las " + timeOf(new Date().toISOString()) + ".";
+        return true;
+      } catch (err) {
+        track.syncError = err.message;
+        return false;
+      } finally {
+        syncing = null;
+        track.busy = false;
+        renderSync();
+        if (!$("view-track").hidden) renderTracking();
+      }
+    })();
+    return syncing;
+  }
+  async function deleteDay(fecha) {
+    const cfg = ghConfig();
+    if (track.remote[fecha] && !cfg) {
+      showTrackNotice("No se puede borrar. ", "Este seguimiento está guardado en GitHub; conecta la web con GitHub para borrarlo también de allí.");
+      renderTracking();
+      return;
+    }
+    if (cfg) {
+      try {
+        const path = dayFile(cfg, fecha);
+        const current = await gh(cfg, "GET", path + "?ref=" + encodeURIComponent(cfg.branch));
+        if (current) await gh(cfg, "DELETE", path, { message: "Borrar seguimiento " + fecha, sha: current.sha, branch: cfg.branch });
+      } catch (err) {
+        showTrackNotice("No se pudo borrar. ", "GitHub: " + err.message + ".");
+        renderTracking();
+        return;
+      }
+      const deleted = deletedDays();
+      deleted[fecha] = Date.now();  // la web publicada tarda un minuto en enterarse
+      saveDeletedDays(deleted);
+    }
+    const days = localDays();
+    delete days[fecha];
+    saveLocalDays(days);
+    showTrackNotice();
+    renderTracking();
+  }
+  async function loadRemote() {
+    try {
+      const resp = await fetch("seguimiento.json?t=" + Date.now(), { cache: "no-store" });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const days = {};
+      for (const d of data.dias || []) {
+        if (d && /^\d{4}-\d{2}-\d{2}$/.test(d.fecha) && Array.isArray(d.monedas)) days[d.fecha] = { fecha: d.fecha, monedas: d.monedas };
+      }
+      track.remote = days;
+      const deleted = deletedDays();
+      let changed = false;
+      for (const fecha of Object.keys(deleted)) if (!days[fecha]) { delete deleted[fecha]; changed = true; }
+      if (changed) saveDeletedDays(deleted);
+    } catch (err) { /* página abierta como archivo o en otro alojamiento: solo hay datos de este navegador */ }
+  }
+  async function refreshPrices() {
+    const markets = [...new Set(allDays().flatMap((d) => d.monedas.map((c) => c.mercado)))].filter((m) => API[m]);
+    if (!markets.length) { renderTracking(); return; }
+    const button = $("track-refresh");
+    button.disabled = true;
+    $("track-status").textContent = "Actualizando precios…";
+    const problems = [];
+    await Promise.all(markets.map(async (m) => {
+      try {
+        const api = liveApis[m] || (liveApis[m] = new BinanceApi(API[m], NEVER));
+        const rows = await api.get(API[m].price, null, API[m].priceW);
+        track.prices[m] = new Map(rows.map((r) => [r.symbol, +r.price]));
+      } catch (err) {
+        problems.push(API[m].nombre + ": " + err.message);
+      }
+    }));
+    button.disabled = false;
+    $("track-status").textContent = "Precios de las " + timeOf(new Date().toISOString()) + " · se actualizan cada minuto";
+    if (problems.length) showTrackNotice("Aviso. ", problems.join(" "));
+    renderTracking();
+  }
+  function showTrackNotice(label, text) {
+    const n = $("track-notice");
+    n.textContent = "";
+    n.hidden = !(label || text);
+    if (label) n.append(h("b", { text: label }));
+    if (text) n.append(text);
+  }
+
+  // ---------- seguimiento: pantalla ----------
+  function withPrices(day) {
+    let coins = day.monedas;
+    if (track.market === "unicas") coins = uniqueItems(coins);
+    else if (track.market !== "todos") coins = coins.filter((c) => c.mercado === track.market);
+    return coins.map((c, i) => {
+      const prices = track.prices[c.mercado];
+      const now = prices ? prices.get(c.simbolo) : undefined;
+      const pct = now != null && c.precio ? (now - c.precio) / c.precio * 100 : null;
+      return Object.assign({}, c, { ahora: now == null ? null : now, pct, orden: i });
+    });
+  }
+  function summarize(coins) {
+    const priced = coins.filter((c) => c.pct != null);
+    if (!priced.length) return { n: 0 };
+    const sorted = [...priced].sort((a, b) => b.pct - a.pct);
+    return {
+      n: priced.length, avg: priced.reduce((sum, c) => sum + c.pct, 0) / priced.length,
+      up: priced.filter((c) => c.pct > 0).length, down: priced.filter((c) => c.pct < 0).length,
+      best: sorted[0], worst: sorted[sorted.length - 1],
+    };
+  }
+  function changeBar(pct) {
+    if (pct == null) return null;
+    const bar = h("span", { class: "chgbar", "aria-hidden": "true" });
+    const fill = h("i");
+    fill.style.width = Math.min(100, Math.abs(pct) / 25 * 100) + "%";  // barra llena = 25 % o más
+    bar.append(fill);
+    return bar;
+  }
+  const ICON_CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+  function isOpen(fecha, index) {
+    const states = readJSON("seguimiento-abiertos", {});
+    return fecha in states ? states[fecha] : index === 0;  // por defecto, solo el día más reciente
+  }
+  function toggleDay(fecha, index) {
+    const states = readJSON("seguimiento-abiertos", {});
+    states[fecha] = !isOpen(fecha, index);
+    store.set("seguimiento-abiertos", JSON.stringify(states));
+    renderTracking();
+  }
+  function deleteControl(fecha) {
+    const wrap = h("span", { class: "confirm" });
+    const ask = h("button", { class: "btn small", type: "button", text: "Borrar" });
+    ask.addEventListener("click", () => {
+      wrap.textContent = "";
+      const yes = h("button", { class: "btn small danger", type: "button", text: "Sí, borrar" });
+      const no = h("button", { class: "btn small", type: "button", text: "No" });
+      yes.addEventListener("click", () => { yes.disabled = true; no.disabled = true; deleteDay(fecha); });
+      no.addEventListener("click", () => { wrap.textContent = ""; wrap.append(ask); });
+      wrap.append(h("span", { text: "¿Borrar este seguimiento?" }), yes, no);
+      no.focus();
+    });
+    wrap.append(ask);
+    return wrap;
+  }
+  function coinTable(day, coins) {
+    const table = h("table", { class: "coins" });
+    table.append(h("thead", null, h("tr", null,
+      h("th", { text: "Moneda" }),
+      h("th", { class: "r", text: "Precio " + shortDate(day.fecha) }),
+      h("th", { class: "r", text: "Precio actual" }),
+      h("th", { class: "r", text: "Variación" }),
+      h("th", { class: "col-scan", text: "Escaneo" }))));
+    const body = h("tbody");
+    coins.forEach((c, i) => {
+      const tr = h("tr", { tabindex: "0", title: "Ver el gráfico de " + c.simbolo },
+        h("td", { class: "c-coin" }, h("span", { class: "coin" }, c.base || c.simbolo, h("small", { text: c.quote ? "/" + c.quote : "" })),
+          h("span", { class: "badge", text: MARKET_NAMES[c.mercado] || c.mercado })),
+        h("td", { class: "r num c-then", "data-label": shortDate(day.fecha), text: fmtPrice(c.precio) }),
+        h("td", { class: "r num c-now", "data-label": "ahora", text: c.ahora == null ? "—" : fmtPrice(c.ahora) }),
+        h("td", { class: "r num c-pct " + (c.pct == null ? "" : c.pct >= 0 ? "up" : "down") }, c.pct == null ? "—" : fmtPct(c.pct), changeBar(c.pct)),
+        h("td", { class: "col-scan muted", text: timeOf(c.hora) + (c.intervalo ? " · velas " + tfLabel(c.intervalo) : "") }));
+      const open = () => openTrackedChart(day, coins, i);
+      tr.addEventListener("click", open);
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+      body.append(tr);
+    });
+    table.append(body);
+    return h("div", { class: "day-body" }, table);
+  }
+  function dayCard(day, index) {
+    const coins = withPrices(day).sort(TRACK_SORTS[track.sort] || TRACK_SORTS.subida);
+    const open = isOpen(day.fecha, index);
+    const s = summarize(coins);
+    const toggle = h("button", { class: "day-toggle", type: "button", "aria-expanded": String(open) });
+    toggle.innerHTML = ICON_CHEVRON;
+    toggle.append(h("h2", { text: "Seguimiento " + dayTitle(day.fecha) }));
+    toggle.addEventListener("click", () => toggleDay(day.fecha, index));
+    const stats = h("div", { class: "day-stats" },
+      h("span", null, h("b", { text: String(coins.length) }), coins.length === 1 ? " moneda" : " monedas"),
+      s.n ? h("span", null, "Media ", h("b", { class: s.avg >= 0 ? "up" : "down", text: fmtPct(s.avg) })) : null,
+      s.n ? h("span", null, h("b", { class: "up", text: "▲ " + s.up }), " suben · ", h("b", { class: "down", text: "▼ " + s.down }), " bajan") : null,
+      s.n > 1 ? h("span", null, "Mejor ", h("b", { text: (s.best.base || s.best.simbolo) + " " + fmtPct(s.best.pct) })) : null,
+      s.n > 1 ? h("span", null, "Peor ", h("b", { text: (s.worst.base || s.worst.simbolo) + " " + fmtPct(s.worst.pct) })) : null,
+      h("span", { text: daysAgo(day.fecha) }));
+    const card = h("article", { class: "day" },
+      h("header", { class: "day-head" }, toggle, stats, h("div", { class: "day-actions" }, deleteControl(day.fecha))));
+    if (open) card.append(coins.length ? coinTable(day, coins) : h("p", { class: "gh-note", style: "padding: 0 14px 12px", text: "Ninguna moneda con este filtro." }));
+    return card;
+  }
+  function renderTrackMarket() {
+    const seg = $("track-market");
+    seg.textContent = "";
+    for (const [key, label] of [["todos", "Todos"], ["spot", "Spot"], ["futures", "Futuros"], ["unicas", "No repetidas"]]) {
+      const b = h("button", { type: "button", "aria-pressed": String(key === track.market) }, label);
+      b.addEventListener("click", () => { track.market = key; renderTracking(); });
+      seg.append(b);
+    }
+  }
+  function renderSync() {
+    const box = $("track-sync");
+    box.textContent = "";
+    const cfg = ghConfig();
+    if (!cfg) {
+      const connect = h("button", { class: "btn small", type: "button", text: "Guardar también en GitHub" });
+      connect.addEventListener("click", () => showGhForm(true));
+      box.append(h("span", { text: "Guardado solo en este navegador." }), connect);
+      return;
+    }
+    box.append(h("span", null, "Guardado en GitHub: ", h("b", { text: cfg.owner + "/" + cfg.repo })));
+    if (track.syncError) box.append(h("span", { class: "down", text: "No se pudo subir: " + track.syncError + "." }));
+    else if (track.sync) box.append(h("span", { text: track.sync }));
+    const pending = Object.values(localDays()).filter((d) => d.pendiente).length;
+    if (pending && !track.busy) {
+      const retry = h("button", { class: "btn small", type: "button", text: pending === 1 ? "Subir el día pendiente" : "Subir " + pending + " días pendientes" });
+      retry.addEventListener("click", () => syncPending());
+      box.append(retry);
+    }
+    const off = h("button", { class: "btn small", type: "button", text: "Desconectar" });
+    off.addEventListener("click", () => { store.set("github", ""); track.sync = ""; track.syncError = ""; renderSync(); });
+    box.append(off);
+  }
+  function renderTracking() {
+    renderTrackMarket();
+    renderSync();
+    $("track-sort").value = track.sort;
+    const list = $("track-days");
+    list.textContent = "";
+    const days = allDays();
+    if (!days.length) {
+      const go = h("button", { class: "btn", type: "button", text: "Ir al escáner" });
+      go.addEventListener("click", () => { location.hash = ""; });
+      list.append(h("div", { class: "empty" },
+        h("p", { style: "margin: 0 0 12px", text: "Todavía no hay seguimientos. Cada escaneo se guarda aquí, en un apartado con la fecha del día y el precio de cada moneda en ese momento." }),
+        go));
+      return;
+    }
+    days.forEach((day, i) => list.append(dayCard(day, i)));
+  }
+  // Abre una moneda del seguimiento en el visor de gráficos, con el precio de entrada marcado.
+  function openTrackedChart(day, coins, index) {
+    if (!state.trackSaved) state.trackSaved = { view: state.view, data: state.data, current: state.current, vtf: state.vtf };
+    state.data = TRACK_CTX;
+    state.tf = state.tf || DEFAULT_TF;
+    state.view = coins.map((c) => ({
+      mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c.ahora == null ? c.precio : c.ahora,
+      var_24h_pct: null, vela_pct: null, vs_ma7_pct: null, ma7_vs_ma25_pct: null, vs_ma99_pct: null, velas_sobre_ma7: null,
+      _seguimiento: { fecha: day.fecha, precio: c.precio, hora: c.hora },
+    }));
+    openViewer(index);
+  }
+  function showGhForm(show) {
+    $("gh-form").hidden = !show;
+    if (!show) return;
+    const cfg = readJSON("github", null);
+    const m = location.hostname.match(/^([^.]+)\.github\.io$/i);
+    const repo = location.pathname.split("/").filter(Boolean)[0];
+    $("gh-repo").value = cfg && cfg.owner ? cfg.owner + "/" + cfg.repo : m && repo ? m[1] + "/" + repo : "";
+    $("gh-token").value = "";
+    $("gh-msg").textContent = "";
+    $("gh-token").focus();
+  }
+  async function connectGitHub(event) {
+    event.preventDefault();
+    const [owner, repo] = $("gh-repo").value.trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\.git$/i, "").split("/");
+    const token = $("gh-token").value.trim();
+    const msg = $("gh-msg");
+    if (!owner || !repo || !token) { msg.textContent = "Escribe el repositorio (usuario/repositorio) y la clave."; return; }
+    msg.textContent = "Comprobando…";
+    try {
+      const info = await gh({ token }, "GET", "/repos/" + encodeURIComponent(owner) + "/" + encodeURIComponent(repo));
+      if (!info) throw new GhError(404, ghMessage(404));
+      const [o, r] = String(info.full_name || owner + "/" + repo).split("/");
+      store.set("github", JSON.stringify({ owner: o, repo: r, branch: info.default_branch || "main", token }));
+      showGhForm(false);
+      track.sync = "Conectado.";
+      track.syncError = "";
+      renderSync();
+      await syncPending();  // sube lo que estaba guardado solo en este navegador
+    } catch (err) {
+      msg.textContent = "No se pudo conectar: " + err.message + ".";
+    }
+  }
+  function showView(view) {
+    const tracking = view === "track";
+    document.body.classList.toggle("tracking", tracking);
+    $("view-track").hidden = !tracking;
+    for (const b of $("views").querySelectorAll("button")) b.setAttribute("aria-pressed", String((b.dataset.view === "track") === tracking));
+    clearInterval(track.timer);
+    track.timer = null;
+    if (!tracking) return;
+    renderTracking();
+    loadRemote().then(() => { renderTracking(); refreshPrices(); });
+    track.timer = setInterval(() => { if (document.visibilityState === "visible") refreshPrices(); }, 60000);
+  }
+  for (const b of $("views").querySelectorAll("button")) {
+    b.addEventListener("click", () => { location.hash = b.dataset.view === "track" ? "seguimiento" : ""; });
+  }
+  window.addEventListener("hashchange", () => showView(location.hash === "#seguimiento" ? "track" : "scan"));
+  $("track-sort").addEventListener("change", (e) => { track.sort = e.target.value; store.set("seguimiento-orden", track.sort); renderTracking(); });
+  $("track-refresh").addEventListener("click", () => refreshPrices());
+  $("gh-form").addEventListener("submit", connectGitHub);
+  $("gh-cancel").addEventListener("click", () => showGhForm(false));
+  track.sort = TRACK_SORTS[store.get("seguimiento-orden")] ? store.get("seguimiento-orden") : track.sort;
+
+  // ---------- arranque ----------
+  state.sort = store.get("sort") || state.sort;
+  setSize(store.get("size") || "l");
+  let initial = null;
+  try { initial = JSON.parse($("momento-data").textContent); } catch (e) { initial = null; }
+  if (initial && initial.mercados) {
+    setData(initial);
+  } else {
+    $("toolbar").hidden = true;
+    renderNotice("Listo para escanear. ", "Pulsa «Escanear» para buscar en Binance las monedas en tendencia bajista (MA(7) < MA(25) < MA(99)) cuya vela está muy cerca o por encima de la MA(7). También puedes abrir un informe con «Cargar informe».");
+  }
+  if (!window.LightweightCharts) {
+    renderNotice("Sin gráficos. ", "No se pudo cargar la librería de gráficos; revisa tu conexión a internet.", true);
+  }
+  if (location.hash === "#seguimiento") showView("track");
+  syncPending();  // días guardados sin conexión con GitHub
 })();
 </script>
-</body>
-</html>

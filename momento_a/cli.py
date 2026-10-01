@@ -6,13 +6,13 @@ import csv
 import json
 import math
 import sys
+from dataclasses import replace
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Optional, Sequence
 
 from .binance import FUTURES, FUTURES_URL, SPOT, SPOT_URL, BinanceClient, BinanceError
-from .report import CHART_INTERVALS, fetch_chart_candles, render_html
-from .scanner import SORT_KEYS, Criteria, ScanResult, Signal, scan
+from .report import build_payload, chart_intervals, fetch_chart_candles, write_report
+from .scanner import INTERVALS, SORT_KEYS, Criteria, ScanResult, Signal, scan
 
 MARKET_CHOICES = {"spot": (SPOT,), "futuros": (FUTURES,), "ambos": (SPOT, FUTURES)}
 MARKET_LABELS = {SPOT: "SPOT", FUTURES: "FUT"}
@@ -22,13 +22,15 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="python -m momento_a",
         description=(
-            "Scanner de Binance (spot y futuros) en velas de 1D. Muestra las criptomonedas "
-            "en tendencia bajista (MA7 < MA25 < MA99) cuya vela está muy cerca o por encima "
-            "de la MA(7) mientras la MA(7) sigue debajo de la MA(25)."
+            "Scanner de Binance (spot y futuros), en velas de 1D por defecto. Muestra las "
+            "criptomonedas en tendencia bajista (MA7 < MA25 < MA99) cuya vela está muy cerca o "
+            "por encima de la MA(7) mientras la MA(7) sigue debajo de la MA(25)."
         ),
     )
     p.add_argument("--mercado", choices=MARKET_CHOICES, default="ambos",
                    help="mercados a escanear (por defecto: ambos)")
+    p.add_argument("--intervalo", choices=INTERVALS, default="1d",
+                   help="temporalidad de las velas (por defecto: 1d)")
     p.add_argument("--cotizacion", default="USDT", metavar="MONEDA",
                    help="moneda de cotización de los pares (por defecto: USDT)")
     p.add_argument("--tolerancia", type=float, default=2.0, metavar="PCT",
@@ -40,20 +42,21 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--permitir-roja", action="store_true",
                    help="incluir también velas rojas (por defecto solo verdes)")
     p.add_argument("--vela-cerrada", action="store_true",
-                   help="evaluar la última vela cerrada en vez de la del día en curso")
+                   help="evaluar la última vela cerrada en vez de la vela en curso")
     p.add_argument("--volumen-min", type=float, default=0.0, metavar="N",
-                   help="volumen mínimo de la última vela cerrada, en la moneda de cotización")
+                   help="volumen mínimo en las últimas 24 h, en la moneda de cotización")
     p.add_argument("--orden", choices=SORT_KEYS, default="fuerza",
                    help="fuerza: vela más fuerte · ma7: más pegadas a la MA7 · cruce: MA7 más "
-                        "cerca de la MA25 · bajista: más lejos de la MA99 · volumen")
+                        "cerca de la MA25 · bajista: más lejos de la MA99 · volumen y variacion: "
+                        "de las últimas 24 h · simbolo")
     p.add_argument("--top", type=int, default=0, metavar="N", help="mostrar solo los N primeros")
     p.add_argument("--csv", metavar="FICHERO", help="guardar los resultados en CSV")
-    p.add_argument("--json", metavar="FICHERO", help="guardar los resultados en JSON")
+    p.add_argument("--json", metavar="FICHERO",
+                   help="guardar los resultados en JSON, con las velas (se abre en la web con «Cargar informe»)")
     p.add_argument("--markdown", metavar="FICHERO",
                    help="guardar un informe en Markdown (lo usa el resumen de GitHub Actions)")
     p.add_argument("--html", metavar="FICHERO",
-                   help="crear una página con gráficos interactivos (velas de "
-                        + ", ".join(CHART_INTERVALS) + ") de los pares encontrados")
+                   help="crear el informe con los gráficos interactivos de los pares encontrados")
     p.add_argument("--hilos", type=int, default=8, help="descargas en paralelo (por defecto: 8)")
     p.add_argument("--spot-url", default=SPOT_URL, help=f"URL base de spot (por defecto: {SPOT_URL})")
     p.add_argument("--futuros-url", default=FUTURES_URL,
@@ -72,15 +75,22 @@ def fmt_price(value: float) -> str:
     return f"{value:.{decimals}f}"
 
 
-def fmt_volume(value: float) -> str:
+def fmt_volume(value: Optional[float]) -> str:
+    if value is None:
+        return "-"
     for limit, suffix in ((1e9, "B"), (1e6, "M"), (1e3, "K")):
         if value >= limit:
             return f"{value / limit:.1f}{suffix}"
     return f"{value:.0f}"
 
 
-def fmt_day(ms: int) -> str:
-    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
+def fmt_time(ms: int) -> str:
+    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
+
+
+def tf_label(interval: str) -> str:
+    """1d -> 1D, 1w -> 1W, como en los gráficos de Binance."""
+    return interval.upper() if interval[-1] in "dw" else interval
 
 
 def describe(criteria: Criteria) -> str:
@@ -92,13 +102,13 @@ def describe(criteria: Criteria) -> str:
     if criteria.require_green:
         parts.append("vela verde")
     if criteria.min_quote_volume:
-        parts.append(f"volumen ≥ {fmt_volume(criteria.min_quote_volume)}")
+        parts.append(f"volumen 24h ≥ {fmt_volume(criteria.min_quote_volume)}")
     return " · ".join(parts)
 
 
 def table_headers(quote: str) -> list[str]:
     return ["MERCADO", "PAR", "PRECIO", "VELA %", "vs MA7 %", "MA7/MA25 %",
-            "vs MA99 %", "DÍAS≥MA7", f"VOL 1D ({quote})"]
+            "vs MA99 %", "VELAS≥MA7", f"VOL 24H ({quote})"]
 
 
 def table_row(s: Signal) -> list[str]:
@@ -110,8 +120,8 @@ def table_row(s: Signal) -> list[str]:
         f"{s.dist_ma7_pct:+.2f}",
         f"{s.gap_ma7_ma25_pct:+.2f}",
         f"{s.dist_ma99_pct:+.2f}",
-        str(s.days_above_ma7),
-        fmt_volume(s.quote_volume),
+        str(s.bars_above_ma7),
+        fmt_volume(s.quote_volume_24h),
     ]
 
 
@@ -125,9 +135,9 @@ def render_table(signals: Sequence[Signal], quote: str) -> str:
     return "\n".join([line(headers), line(["-" * w for w in widths]), *(line(r) for r in rows)])
 
 
-def render_markdown(signals: Sequence[Signal], quote: str, summary: Sequence[str]) -> str:
+def render_markdown(signals: Sequence[Signal], quote: str, summary: Sequence[str], interval: str = "1d") -> str:
     """Informe en Markdown (para el resumen de GitHub Actions); cada par enlaza a Binance."""
-    lines = ["## Momento-A · scanner MA 1D", "", *(f"- {line}" for line in summary), ""]
+    lines = [f"## Momento-A · scanner MA {tf_label(interval)}", "", *(f"- {line}" for line in summary), ""]
     if not signals:
         lines.append("Ningún par cumple los criterios ahora mismo.")
         return "\n".join(lines) + "\n"
@@ -142,8 +152,9 @@ def render_markdown(signals: Sequence[Signal], quote: str, summary: Sequence[str
 
 
 RECORD_FIELDS = (
-    "mercado", "par", "base", "cotizacion", "fecha_vela", "precio", "vela_pct", "ma7", "ma25",
-    "ma99", "vs_ma7_pct", "ma7_vs_ma25_pct", "vs_ma99_pct", "dias_sobre_ma7", "volumen_1d", "url",
+    "mercado", "par", "base", "cotizacion", "apertura_vela_utc", "precio", "vela_pct", "ma7", "ma25",
+    "ma99", "vs_ma7_pct", "ma7_vs_ma25_pct", "vs_ma99_pct", "velas_sobre_ma7", "var_24h_pct",
+    "volumen_24h", "url",
 )
 
 
@@ -153,7 +164,7 @@ def signal_record(s: Signal) -> dict:
         "par": s.instrument.symbol,
         "base": s.instrument.base,
         "cotizacion": s.instrument.quote,
-        "fecha_vela": fmt_day(s.candle_open_time),
+        "apertura_vela_utc": fmt_time(s.candle_open_time),
         "precio": s.price,
         "vela_pct": round(s.change_pct, 4),
         "ma7": s.ma7,
@@ -162,8 +173,9 @@ def signal_record(s: Signal) -> dict:
         "vs_ma7_pct": round(s.dist_ma7_pct, 4),
         "ma7_vs_ma25_pct": round(s.gap_ma7_ma25_pct, 4),
         "vs_ma99_pct": round(s.dist_ma99_pct, 4),
-        "dias_sobre_ma7": s.days_above_ma7,
-        "volumen_1d": s.quote_volume,
+        "velas_sobre_ma7": s.bars_above_ma7,
+        "var_24h_pct": s.change_24h_pct,
+        "volumen_24h": s.quote_volume_24h,
         "url": s.instrument.url,
     }
 
@@ -175,21 +187,24 @@ def write_csv(path: str, signals: Sequence[Signal]) -> None:
         writer.writerows(signal_record(s) for s in signals)
 
 
-def write_json(path: str, signals: Sequence[Signal]) -> None:
+def write_json(path: str, payload: dict) -> None:
     with open(path, "w", encoding="utf-8") as f:
-        json.dump([signal_record(s) for s in signals], f, ensure_ascii=False, indent=2)
+        json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
 
 
-def progress(done: int, total: int) -> None:
-    sys.stderr.write(f"\rDescargando velas 1D: {done}/{total}")
-    if done == total:
-        sys.stderr.write("\n")
-    sys.stderr.flush()
+def progress_printer(what: str):
+    def report(done: int, total: int) -> None:
+        sys.stderr.write(f"\r{what}: {done}/{total}")
+        if done == total:
+            sys.stderr.write("\n")
+        sys.stderr.flush()
+    return report
 
 
 def main(argv: Optional[Sequence[str]] = None, client: Optional[BinanceClient] = None) -> int:
     args = build_parser().parse_args(argv)
     criteria = Criteria(
+        interval=args.intervalo,
         tolerance_pct=args.tolerancia,
         max_above_pct=args.max_encima,
         require_ma99=not args.sin_ma99,
@@ -207,7 +222,7 @@ def main(argv: Optional[Sequence[str]] = None, client: Optional[BinanceClient] =
             quote,
             criteria,
             workers=max(1, args.hilos),
-            on_progress=progress if sys.stderr.isatty() else None,
+            on_progress=progress_printer(f"Descargando velas {tf_label(args.intervalo)}") if sys.stderr.isatty() else None,
         )
     except BinanceError as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -220,10 +235,11 @@ def main(argv: Optional[Sequence[str]] = None, client: Optional[BinanceClient] =
         f"{MARKET_LABELS[m]} {sum(i.market == m for i in result.instruments)}"
         for m in MARKET_CHOICES[args.mercado]
     )
-    candle = "última vela cerrada" if criteria.closed_candle else "vela del día en curso"
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    candle = "última vela cerrada" if criteria.closed_candle else "vela en curso"
+    started = datetime.now(timezone.utc)
     summary = [
-        f"Velas 1D · {candle} · {now} · {len(result.instruments)} pares ({per_market})",
+        f"Velas {tf_label(args.intervalo)} · {candle} · {started:%Y-%m-%d %H:%M} UTC · "
+        f"{len(result.instruments)} pares ({per_market})",
         f"Criterios: {describe(criteria)}",
         f"Coincidencias: {len(signals)}",
     ]
@@ -238,6 +254,8 @@ def main(argv: Optional[Sequence[str]] = None, client: Optional[BinanceClient] =
     else:
         print("Ningún par cumple los criterios ahora mismo.")
 
+    for warning in result.warnings:
+        print(f"\nAviso: {warning}", file=sys.stderr)
     if result.errors:
         print(f"\nAviso: {len(result.errors)} pares no se pudieron analizar:", file=sys.stderr)
         for name, msg in list(result.errors.items())[:5]:
@@ -246,27 +264,26 @@ def main(argv: Optional[Sequence[str]] = None, client: Optional[BinanceClient] =
     if args.csv:
         write_csv(args.csv, signals)
         print(f"\nCSV guardado en {args.csv}")
-    if args.json:
-        write_json(args.json, signals)
-        print(f"JSON guardado en {args.json}")
     if args.markdown:
         with open(args.markdown, "w", encoding="utf-8") as f:
-            f.write(render_markdown(shown, quote, summary))
-    if args.html:
+            f.write(render_markdown(shown, quote, summary, args.intervalo))
+    if args.json or args.html:
+        # El informe lleva las velas de cada moneda en varias temporalidades, para sus gráficos.
         try:
             charts, chart_errors = fetch_chart_candles(
-                client, [s.instrument for s in shown], workers=max(1, args.hilos)
+                client, [s.instrument for s in shown], chart_intervals(args.intervalo),
+                workers=max(1, args.hilos),
             )
         except BinanceError as exc:
             print(f"Error al descargar las velas de los gráficos: {exc}", file=sys.stderr)
             return 1
-        html = render_html(
-            [(signal_record(s), charts[s.instrument]) for s in shown], summary, quote, now
-        )
-        path = Path(args.html)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(html, encoding="utf-8")
-        print(f"Página con gráficos guardada en {args.html}")
         for name, msg in list(chart_errors.items())[:5]:
             print(f"Aviso: sin velas de {name}: {msg}", file=sys.stderr)
+        payload = build_payload(replace(result, signals=shown), criteria, started, args.orden, charts, quote)
+        if args.json:
+            write_json(args.json, payload)
+            print(f"JSON guardado en {args.json}")
+        if args.html:
+            write_report(args.html, payload)
+            print(f"Informe con gráficos guardado en {args.html}")
     return 0

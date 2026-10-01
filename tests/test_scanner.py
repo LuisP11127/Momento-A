@@ -26,7 +26,8 @@ def test_bearish_candle_crossing_above_ma7_is_signal():
     assert signal.change_pct == pytest.approx((85 - 82) / 82 * 100)
     assert signal.gap_ma7_ma25_pct < 0
     assert signal.dist_ma99_pct < 0
-    assert signal.days_above_ma7 == 1  # acaba de cruzar: las velas previas estaban debajo
+    assert signal.bars_above_ma7 == 1  # acaba de cruzar: las velas previas estaban debajo
+    assert len(signal.candles) == len(candles)  # para el gráfico del informe
 
 
 def test_candle_just_below_ma7_within_tolerance():
@@ -71,12 +72,6 @@ def test_not_enough_history_for_ma99():
     assert evaluate(BTC, candles, Criteria(require_ma99=False), now) is None
 
 
-def test_volume_filter_uses_last_closed_candle():
-    candles, now = downtrend(last_close=85.0)
-    assert evaluate(BTC, candles, Criteria(min_quote_volume=1_000_000), now) is not None
-    assert evaluate(BTC, candles, Criteria(min_quote_volume=1_000_001), now) is None
-
-
 def test_closed_candle_mode_ignores_candle_in_progress():
     # La vela en curso cruza la MA7, pero la última cerrada está lejos de ella.
     candles, now = downtrend(last_close=85.0)
@@ -88,26 +83,36 @@ def test_closed_candle_mode_ignores_candle_in_progress():
     assert evaluate(BTC, candles, Criteria(closed_candle=True), after_close) is not None
 
 
-def test_days_above_ma7_counts_consecutive_candles():
+def test_bars_above_ma7_counts_consecutive_candles():
     closes = [200.0 - i for i in range(115)] + [89.0, 91.0, 93.0, 95.0]
     candles, now = make_candles(closes)
     signal = evaluate(BTC, candles, Criteria(), now)
     assert signal is not None
-    assert signal.days_above_ma7 == 4
+    assert signal.bars_above_ma7 == 4
 
 
 class FakeClient:
-    def __init__(self, data, fail=None):
+    def __init__(self, data, fail=None, tickers=None, tags=None):
         self.data = data  # {Instrument: candles}
         self.fail = fail or {}  # {symbol: exception}
+        self.tickers = tickers or {}  # {mercado: {símbolo: ticker 24h}}
+        self.tags = {} if tags is None else tags  # etiquetas de la web de Binance (False = no responde)
+        self.intervals = []
 
     def instruments(self, market, quote):
         return [i for i in self.data if i.market == market and i.quote == quote]
 
-    def daily_candles(self, instrument):
+    def candles(self, instrument, interval, limit):
+        self.intervals.append(interval)
         if instrument.symbol in self.fail:
             raise self.fail[instrument.symbol]
         return self.data[instrument]
+
+    def tickers_24h(self, market):
+        return self.tickers.get(market, {})
+
+    def asset_tags(self):
+        return None if self.tags is False else self.tags
 
 
 def test_scan_collects_signals_and_errors():
@@ -128,6 +133,8 @@ def test_scan_collects_signals_and_errors():
     ]
     assert len(result.instruments) == 4
     assert list(result.errors) == ["spot:XRPUSDT"]
+    # BTC y SOL en spot (XRP falló) y ETH en futuros tienen historial suficiente.
+    assert result.analyzed == {SPOT: 2, FUTURES: 1}
 
 
 def test_scan_aborts_on_fatal_error():
@@ -135,3 +142,49 @@ def test_scan_aborts_on_fatal_error():
     client = FakeClient({BTC: hit}, fail={"BTCUSDT": BinanceFatalError("HTTP 451")})
     with pytest.raises(BinanceFatalError):
         scan(client, [SPOT], "USDT", Criteria(), workers=1)
+
+
+def test_scan_uses_interval_and_24h_stats():
+    hit, _ = downtrend(last_close=85.0)
+    tickers = {SPOT: {"BTCUSDT": {"quoteVolume": "1234.5", "priceChangePercent": "-2.5"}}}
+    client = FakeClient({BTC: hit}, tickers=tickers)
+    result = scan(client, [SPOT], "USDT", Criteria(interval="4h"))
+
+    (signal,) = result.signals
+    assert client.intervals == ["4h"]
+    assert (signal.quote_volume_24h, signal.change_24h_pct) == (1234.5, -2.5)
+
+
+def test_min_volume_is_filtered_before_downloading_candles():
+    hit, _ = downtrend(last_close=85.0)
+    eth = Instrument(SPOT, "ETHUSDT", "ETH", "USDT")
+    tickers = {SPOT: {"BTCUSDT": {"quoteVolume": "5000000"}, "ETHUSDT": {"quoteVolume": "100"}}}
+    client = FakeClient({BTC: hit, eth: hit}, tickers=tickers)
+    result = scan(client, [SPOT], "USDT", Criteria(min_quote_volume=1_000_000))
+
+    assert [i.symbol for i in result.instruments] == ["BTCUSDT"]
+    assert len(client.intervals) == 1  # las velas de ETH no se descargan
+
+
+def test_tokenized_stocks_are_left_out_of_spot():
+    hit, _ = downtrend(last_close=85.0)
+    stock = Instrument(SPOT, "AAPLBUSDT", "AAPLB", "USDT")
+    client = FakeClient({BTC: hit, stock: hit}, tags={"AAPLBUSDT": ["bStocks"], "BTCUSDT": ["Layer1"]})
+    result = scan(client, [SPOT], "USDT", Criteria())
+    assert [s.instrument.symbol for s in result.signals] == ["BTCUSDT"]
+    assert result.warnings == []
+
+    # Si la web de Binance no responde, se avisa y no se descarta nada.
+    client = FakeClient({BTC: hit, stock: hit}, tags=False)
+    result = scan(client, [SPOT], "USDT", Criteria())
+    assert len(result.signals) == 2
+    assert "acciones tokenizadas" in result.warnings[0]
+
+
+def test_pairs_without_enough_history_are_not_counted_as_analyzed():
+    hit, _ = downtrend(last_close=85.0)
+    new, _ = downtrend(last_close=85.0, days=50)
+    client = FakeClient({BTC: hit, Instrument(SPOT, "NEWUSDT", "NEW", "USDT"): new})
+    result = scan(client, [SPOT], "USDT", Criteria())
+    assert result.analyzed == {SPOT: 1}
+    assert len(result.instruments) == 2

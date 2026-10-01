@@ -1,7 +1,12 @@
-name: Scanner MA 1D
+name: Scanner
 
+# Tests y un escaneo real desde los servidores de GitHub. Se lanza a mano en Actions → Scanner → Run
+# workflow (con los filtros como opciones) y, además, en cada pull request y en cada cambio en main.
 on:
-  # Ejecución manual desde la pestaña Actions, con los filtros como opciones.
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/seguimiento/**"]  # los guardados del seguimiento no cambian el código
   workflow_dispatch:
     inputs:
       mercado:
@@ -9,6 +14,11 @@ on:
         type: choice
         options: [ambos, spot, futuros]
         default: ambos
+      intervalo:
+        description: Temporalidad de las velas
+        type: choice
+        options: ["15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "1w"]
+        default: "1d"
       tolerancia:
         description: "% máximo por debajo de la MA(7) para contar como 'muy cerca'"
         type: string
@@ -18,13 +28,13 @@ on:
         type: string
         default: ""
       volumen_min:
-        description: Volumen mínimo de la última vela cerrada (en USDT)
+        description: Volumen mínimo en 24 h (en USDT)
         type: string
         default: "0"
       orden:
-        description: "Orden: fuerza, ma7, cruce, bajista o volumen"
+        description: Orden de los resultados
         type: choice
-        options: [fuerza, ma7, cruce, bajista, volumen]
+        options: [fuerza, cruce, ma7, bajista, volumen, variacion, simbolo]
         default: fuerza
       sin_ma99:
         description: No exigir MA25 < MA99 (basta con MA7 < MA25)
@@ -35,91 +45,78 @@ on:
         type: boolean
         default: false
       vela_cerrada:
-        description: Evaluar la última vela cerrada en vez de la del día en curso
+        description: Evaluar la última vela cerrada en vez de la vela en curso
         type: boolean
         default: false
-  # Ejecución automática (horas en UTC; la vela diaria de Binance cierra a las 00:00 UTC).
-  schedule:
-    # Justo después del cierre: señales confirmadas con la vela que acaba de cerrar.
-    - cron: "17 0 * * *"
-    # Durante el día: vela en curso.
-    - cron: "17 12,18 * * *"
 
 permissions:
   contents: read
 
-concurrency:
-  group: scanner
-
 jobs:
-  scan:
+  tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+      # La web guarda en el navegador la clave de GitHub del seguimiento: la librería de gráficos
+      # se carga con una huella (SRI) y aquí se comprueba que coincide con el archivo del CDN.
+      - name: Comprobar la huella de la librería de gráficos
+        shell: python
+        run: |
+          import base64, hashlib, re, urllib.request
+          html = open("momento_a/report_template.html", encoding="utf-8").read()
+          src, integrity = re.search(r'<script src="(https://[^"]+)" integrity="([^"]+)"', html).groups()
+          data = urllib.request.urlopen(src, timeout=60).read()
+          digest = "sha384-" + base64.b64encode(hashlib.sha384(data).digest()).decode()
+          print(src, digest)
+          assert digest == integrity, f"la huella no coincide: {digest} != {integrity}"
 
+  scan:
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
       - name: Instalar dependencias
         run: pip install -r requirements.txt
 
       - name: Escanear Binance
         env:
           MERCADO: ${{ inputs.mercado || 'ambos' }}
+          INTERVALO: ${{ inputs.intervalo || '1d' }}
           TOLERANCIA: ${{ inputs.tolerancia || '2' }}
           MAX_ENCIMA: ${{ inputs.max_encima }}
           VOLUMEN_MIN: ${{ inputs.volumen_min || '0' }}
           ORDEN: ${{ inputs.orden || 'fuerza' }}
           SIN_MA99: ${{ inputs.sin_ma99 }}
           PERMITIR_ROJA: ${{ inputs.permitir_roja }}
-          VELA_CERRADA: ${{ inputs.vela_cerrada || github.event.schedule == '17 0 * * *' }}
+          VELA_CERRADA: ${{ inputs.vela_cerrada }}
         run: |
-          args=(--mercado "$MERCADO" --tolerancia "$TOLERANCIA" --volumen-min "$VOLUMEN_MIN" --orden "$ORDEN")
+          args=(--mercado "$MERCADO" --intervalo "$INTERVALO" --tolerancia "$TOLERANCIA" --volumen-min "$VOLUMEN_MIN" --orden "$ORDEN")
           if [ -n "$MAX_ENCIMA" ]; then args+=(--max-encima "$MAX_ENCIMA"); fi
           if [ "$SIN_MA99" = "true" ]; then args+=(--sin-ma99); fi
           if [ "$PERMITIR_ROJA" = "true" ]; then args+=(--permitir-roja); fi
           if [ "$VELA_CERRADA" = "true" ]; then args+=(--vela-cerrada); fi
-          python -m momento_a "${args[@]}" \
-            --csv resultados.csv --json resultados.json --markdown "$GITHUB_STEP_SUMMARY" \
-            --html sitio/index.html
+          mkdir -p reportes
+          python -m momento_a "${args[@]}" --markdown "$GITHUB_STEP_SUMMARY" \
+            --csv reportes/momento-a.csv --json reportes/momento-a.json --html reportes/momento-a.html
+          {
+            echo
+            echo "Informe con los gráficos en **Artifacts → momento-a**, al final de esta página: abre \`momento-a.html\`, o carga \`momento-a.json\` en la web con **Cargar informe**."
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Guardar resultados (CSV, JSON y página de gráficos)
+      - name: Guardar el informe
         uses: actions/upload-artifact@v6
         with:
-          name: resultados-${{ github.run_number }}
-          path: |
-            resultados.csv
-            resultados.json
-            sitio/index.html
+          name: momento-a
+          path: reportes/
           retention-days: 30
-
-      - name: Preparar la página de gráficos para GitHub Pages
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: sitio
-
-  # Publica los gráficos del último escaneo en GitHub Pages (solo desde main).
-  pages:
-    needs: scan
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Publicar en GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-      - name: Enlace a los gráficos
-        env:
-          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
-        run: |
-          echo "## Gráficos interactivos: $PAGE_URL" >> "$GITHUB_STEP_SUMMARY"

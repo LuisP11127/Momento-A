@@ -26,6 +26,11 @@ FALLBACK_URLS = {SPOT: "https://data-api.binance.vision", FUTURES: "https://www.
 # 150 velas bastan para la MA(99) y mantienen el peso de la petición en 2.
 KLINES_LIMIT = 150
 
+TICKER_PATHS = {SPOT: "/api/v3/ticker/24hr", FUTURES: "/fapi/v1/ticker/24hr"}
+
+# Lista de productos de la web de Binance: trae las etiquetas de cada par spot (p. ej. "bStocks").
+PRODUCTS_URL = "https://www.binance.com/bapi/asset/v2/public/asset-service/product/get-products?includeEtf=true"
+
 # Monedas estables y fiat: no tienen tendencia, así que no se escanean.
 STABLECOINS = frozenset(
     {
@@ -34,6 +39,11 @@ STABLECOINS = frozenset(
         "AEUR", "EURI", "EUR", "GBP", "TRY", "BRL", "ARS", "MXN", "JPY",
     }
 )
+
+
+def is_tokenized_stock(tags) -> bool:
+    """Binance etiqueta sus acciones tokenizadas (AAPLB, NVDAB...) como "bStocks"."""
+    return any(isinstance(tag, str) and "stock" in tag.lower() for tag in tags or ())
 
 
 class BinanceError(RuntimeError):
@@ -191,3 +201,21 @@ class BinanceClient:
 
     def daily_candles(self, instrument: Instrument, limit: int = KLINES_LIMIT) -> list[Candle]:
         return self.candles(instrument, "1d", limit)
+
+    def tickers_24h(self, market: str) -> dict[str, dict]:
+        """Estadísticas de las últimas 24 h (volumen, variación) de todos los pares, por símbolo."""
+        return {t["symbol"]: t for t in self._get(market, TICKER_PATHS[market]) if "symbol" in t}
+
+    def asset_tags(self) -> Optional[dict[str, list[str]]]:
+        """Etiquetas que la web de Binance muestra para cada par spot, o ``None`` si no responde.
+
+        No es un endpoint de la API oficial, así que cualquier fallo se trata como "sin datos".
+        """
+        try:
+            resp = self._session().get(PRODUCTS_URL, timeout=self.timeout)
+            resp.raise_for_status()
+            products = resp.json().get("data")
+            tags = {p["s"]: list(p.get("tags") or []) for p in products if isinstance(p, dict) and "s" in p}
+            return tags or None  # una respuesta vacía o con otro formato no sirve para filtrar
+        except (requests.RequestException, ValueError, AttributeError, TypeError, KeyError):
+            return None

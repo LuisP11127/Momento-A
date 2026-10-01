@@ -10,17 +10,28 @@ class FakeClient:
     def __init__(self, data, error=None):
         self.data = data
         self.error = error
+        self.intervals = set()
 
     def instruments(self, market, quote):
         if self.error:
             raise self.error
         return [i for i in self.data if i.market == market and i.quote == quote]
 
-    def daily_candles(self, instrument):
+    def candles(self, instrument, interval, limit):
+        self.intervals.add(interval)
         return self.data[instrument]
 
-    def candles(self, instrument, interval, limit):
-        return self.data[instrument]
+    def tickers_24h(self, market):
+        return {i.symbol: {"quoteVolume": "2500000", "priceChangePercent": "1.25"} for i in self.data if i.market == market}
+
+    def asset_tags(self):
+        return {}
+
+
+def embedded(html):
+    marker = '<script id="momento-data" type="application/json">'
+    start = html.index(marker) + len(marker)
+    return json.loads(html[start : html.index("</script>", start)])
 
 
 def sample_client():
@@ -42,8 +53,16 @@ def test_prints_table_sorted_by_strength(capsys):
     assert "3 pares (SPOT 2, FUT 1)" in out
     assert "MA7 < MA25 < MA99" in out
     assert "Coincidencias: 2" in out
+    assert "VELAS≥MA7" in out and "VOL 24H (USDT)" in out and "2.5M" in out
     assert out.index("BBBUSDT") < out.index("AAAUSDT")  # la vela más fuerte primero
     assert "CCCUSDT" not in out
+
+
+def test_interval_option_is_used_for_the_scan(capsys):
+    client = sample_client()
+    assert main(["--intervalo", "4h"], client=client) == 0
+    assert client.intervals == {"4h"}
+    assert "Velas 4h · vela en curso" in capsys.readouterr().out
 
 
 def test_market_filter_and_exports(tmp_path, capsys):
@@ -57,8 +76,14 @@ def test_market_filter_and_exports(tmp_path, capsys):
     assert tuple(rows[0]) == RECORD_FIELDS
     assert rows[0]["url"] == "https://www.binance.com/es/trade/AAA_USDT?type=spot"
 
-    records = json.loads(json_path.read_text(encoding="utf-8"))
-    assert records[0]["mercado"] == "SPOT" and records[0]["ma7"] < records[0]["ma25"]
+    assert rows[0]["velas_sobre_ma7"] == "1" and rows[0]["volumen_24h"] == "2500000.0"
+
+    # El JSON es el informe completo (con velas): la web lo abre con «Cargar informe».
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert list(payload["mercados"]) == ["spot"]
+    (item,) = payload["mercados"]["spot"]["coincidencias"]
+    assert item["simbolo"] == "AAAUSDT" and item["ma7"] < item["ma25"]
+    assert set(item["graficos"]) == {"2h", "4h", "8h", "12h"} and item["velas"]
 
 
 def test_markdown_report_links_pairs_and_mentions_fallback(tmp_path, capsys):
@@ -71,22 +96,22 @@ def test_markdown_report_links_pairs_and_mentions_fallback(tmp_path, capsys):
     md = md_path.read_text(encoding="utf-8")
 
     assert "datos de FUT tomados de https://www.binance.com" in out
+    assert md.startswith("## Momento-A · scanner MA 1D")
     assert "- Coincidencias: 2" in md
     assert "| [BBBUSDT](https://www.binance.com/es/futures/BBBUSDT) | " in md
     assert "CCCUSDT" not in md
 
 
-def test_html_page_has_charts_for_each_match(tmp_path, capsys):
-    html_path = tmp_path / "sitio" / "index.html"
+def test_html_report_has_charts_for_each_match(tmp_path, capsys):
+    html_path = tmp_path / "reportes" / "momento-a.html"
     assert main(["--html", str(html_path)], client=sample_client()) == 0
-    assert "Página con gráficos guardada" in capsys.readouterr().out
+    assert "Informe con gráficos guardado" in capsys.readouterr().out
 
-    html = html_path.read_text(encoding="utf-8")
-    start = html.index("window.MOMENTO_DATA = ") + len("window.MOMENTO_DATA = ")
-    data = json.loads(html[start : html.index(";\n", start)])
-    assert [p["par"] for p in data["pares"]] == ["BBBUSDT", "AAAUSDT"]
-    assert set(data["pares"][0]["velas"]) == {"2h", "4h", "8h", "12h", "1d"}
-    assert data["resumen"][2] == "Coincidencias: 2"
+    data = embedded(html_path.read_text(encoding="utf-8"))
+    assert data["intervalo"] == "1d" and data["criterios"]["tolerancia"] == 2.0
+    assert {k: [c["simbolo"] for c in m["coincidencias"]] for k, m in data["mercados"].items()} == {
+        "spot": ["AAAUSDT"], "futures": ["BBBUSDT"]}
+    assert data["mercados"]["spot"]["analizadas"] == 2
 
 
 def test_no_matches_message(capsys):
@@ -106,3 +131,4 @@ def test_formatters():
     assert fmt_volume(1_234_567_890) == "1.2B"
     assert fmt_volume(2_500_000) == "2.5M"
     assert fmt_volume(999) == "999"
+    assert fmt_volume(None) == "-"

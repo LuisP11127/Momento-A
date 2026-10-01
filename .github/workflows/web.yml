@@ -1,0 +1,66 @@
+name: Web
+
+# Publica la web (el escáner que funciona desde el navegador) en GitHub Pages, con la lista de acciones
+# tokenizadas al día (bstocks.json) y todos los días de seguimiento (docs/seguimiento/*.json, los guarda
+# la propia web) en seguimiento.json. Solo despliega si GitHub Pages está activado con «Source: GitHub Actions».
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 5 * * *"  # cada día, para refrescar la lista de acciones tokenizadas
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.pages.outputs.enabled }}
+    steps:
+      - id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          build_type=$(gh api "repos/${{ github.repository }}/pages" --jq .build_type 2>/dev/null || true)
+          echo "GitHub Pages: ${build_type:-desactivado}"
+          if [ "$build_type" = "workflow" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Web sin publicar::Activa GitHub Pages con «Source: GitHub Actions» (ver README)."
+          fi
+
+  deploy:
+    needs: check
+    if: needs.check.outputs.enabled == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Construir la web
+        run: python -m momento_a.web sitio --bstocks --seguimiento docs/seguimiento
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: sitio
+      - id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Enlace a la web
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          echo "## Web publicada: $PAGE_URL" >> "$GITHUB_STEP_SUMMARY"
