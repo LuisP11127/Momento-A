@@ -184,17 +184,20 @@ body.tracking .scan-only { display: none !important; }
 .coins .muted { color: var(--muted); font-size: 13px; }
 .chgbar { display: inline-block; position: relative; width: 52px; height: 6px; margin-left: 10px; vertical-align: middle; background: var(--grid); border-radius: 3px; overflow: hidden; }
 .chgbar i { position: absolute; top: 0; bottom: 0; left: 0; background: currentColor; border-radius: 3px; }
-/* En el móvil cada moneda ocupa dos líneas: moneda y variación arriba, precio entonces y ahora debajo. */
+.coins td small { font-size: 12px; margin-left: 6px; }
+/* En el móvil cada moneda ocupa tres líneas: moneda y variación; precio entonces y ahora; mínimo y máximo. */
 @media (max-width: 640px) {
   .coins thead, .coins .col-scan, .chgbar { display: none; }
-  .coins tbody tr { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "coin pct" "then now"; gap: 2px 12px; padding: 9px 12px; border-bottom: 1px solid var(--grid); }
+  .coins tbody tr { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "coin pct" "then now" "min max"; gap: 2px 12px; padding: 9px 12px; border-bottom: 1px solid var(--grid); }
   .coins tbody tr:last-child { border-bottom: 0; }
   .coins td { padding: 0; border: 0; }
   .coins .c-coin { grid-area: coin; }
   .coins .c-pct { grid-area: pct; font-weight: 500; }
   .coins .c-then { grid-area: then; text-align: left; font-size: 12.5px; }
   .coins .c-now { grid-area: now; font-size: 12.5px; }
-  .coins .c-then::before, .coins .c-now::before { content: attr(data-label) " "; color: var(--muted); font-family: var(--font-body); }
+  .coins .c-min { grid-area: min; text-align: left; font-size: 12.5px; }
+  .coins .c-max { grid-area: max; font-size: 12.5px; }
+  .coins .c-then::before, .coins .c-now::before, .coins .c-min::before, .coins .c-max::before { content: attr(data-label) " "; color: var(--muted); font-family: var(--font-body); }
 }
 .empty { padding: 28px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; }
 .foot { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 18px; }
@@ -322,12 +325,15 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
         <select id="track-sort">
           <option value="subida">Mayor subida</option>
           <option value="bajada">Mayor bajada</option>
+          <option value="maximo">Mayor máximo</option>
+          <option value="minimo">Peor mínimo</option>
           <option value="moneda">Moneda</option>
           <option value="escaneo">Orden del escaneo</option>
         </select>
       </label>
       <button class="btn" id="track-refresh" type="button">Actualizar precios</button>
       <span class="scan-status" id="track-status" aria-live="polite"></span>
+      <span class="scan-status" id="track-ext" aria-live="polite"></span>
     </div>
     <div class="sync" id="track-sync"></div>
     <form class="gh" id="gh-form" autocomplete="off" hidden>
@@ -957,6 +963,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       h("span", { class: "tf-tag", text: "Seguimiento " + dayTitle(sg.fecha) }),
       h("span", null, "Precio entonces ", h("b", { text: fmtPrice(sg.precio) })),
       pct == null ? null : h("span", null, "Variación ", h("b", { class: pct >= 0 ? "up" : "down", text: fmtPct(pct) })),
+      sg.min == null ? null : h("span", null, "Mínimo ", h("b", { text: fmtPrice(sg.min) }), " ", h("b", { class: "down", text: fmtPct(sg.minPct) })),
+      sg.max == null ? null : h("span", null, "Máximo ", h("b", { text: fmtPrice(sg.max) }), " ", h("b", { class: "up", text: fmtPct(sg.maxPct) })),
       h("span", null, h("b", { text: (index + 1) + "/" + state.view.length })));
   }
   function drawBig(it, index) {
@@ -1360,6 +1368,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   const TRACK_SORTS = {
     subida: (a, b) => (b.pct ?? -Infinity) - (a.pct ?? -Infinity),
     bajada: (a, b) => (a.pct ?? Infinity) - (b.pct ?? Infinity),
+    maximo: (a, b) => (b.maxPct ?? -Infinity) - (a.maxPct ?? -Infinity),
+    minimo: (a, b) => (a.minPct ?? Infinity) - (b.minPct ?? Infinity),
     moneda: (a, b) => a.simbolo.localeCompare(b.simbolo),
     escaneo: (a, b) => a.orden - b.orden,
   };
@@ -1578,6 +1588,62 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     if (problems.length) showTrackNotice("Aviso. ", problems.join(" "));
     renderTracking();
   }
+  // ---------- seguimiento: mínimo y máximo desde el escaneo ----------
+  // El precio más bajo y más alto de cada moneda desde la hora en que se guardó, con las velas de Binance.
+  // Se guardan en este navegador y después solo se piden las velas nuevas; entre medias cuenta el precio actual.
+  const EXT_TFS = [["1m", 60e3], ["5m", 3e5], ["15m", 9e5], ["1h", 36e5], ["4h", 144e5], ["1d", 864e5]];
+  const extKey = (fecha, c) => fecha + "|" + c.mercado + ":" + c.simbolo;
+  track.extremes = readJSON("seguimiento-extremos", {});
+  track.extremesAt = 0;
+  // La temporalidad más fina con la que bastan 1000 velas (el máximo por petición) para cubrir ese tiempo.
+  function pickTf(ms) { return EXT_TFS.find(([, len]) => ms / len <= 990) || EXT_TFS[EXT_TFS.length - 1]; }
+  async function candlesFrom(api, cfg, symbol, tf, from, limit) {
+    const rows = await api.get(cfg.klines, { symbol, interval: tf, startTime: Math.floor(from), limit }, cfg.klinesW(limit));
+    return rows.map(row);
+  }
+  async function updateExtremes(fecha, c) {
+    const cfg = API[c.mercado], start = Date.parse(c.hora);
+    if (!cfg || !isFinite(start) || !(c.precio > 0)) return;
+    const key = extKey(fecha, c), prev = track.extremes[key];
+    const from = prev && prev.hasta ? prev.hasta : start;
+    let min = prev ? prev.min : c.precio, max = prev ? prev.max : c.precio;  // el precio del seguimiento también cuenta
+    const api = liveApis[c.mercado] || (liveApis[c.mercado] = new BinanceApi(cfg, NEVER));
+    const [tf, len] = pickTf(Date.now() - from);
+    const rows = [];
+    if (len > 60e3) {
+      // Las velas grandes empiezan en su hora en punto: el tramo hasta la primera se cubre con velas de 1 minuto.
+      rows.push(...(await candlesFrom(api, cfg, c.simbolo, "1m", from, Math.min(1000, Math.ceil(len / 60e3))))
+        .filter((r) => r[0] + 60e3 > from));
+    }
+    const limit = Math.min(1000, Math.ceil((Date.now() - from) / len) + 2);
+    const big = (await candlesFrom(api, cfg, c.simbolo, tf, from, limit)).filter((r) => (len > 60e3 ? r[0] >= from : r[0] + 60e3 > from));
+    rows.push(...big);
+    for (const r of rows) { if (r[3] < min) min = r[3]; if (r[2] > max) max = r[2]; }
+    // La última vela sigue abierta: la próxima vez se empieza desde ella.
+    track.extremes[key] = { min, max, hasta: big.length ? big[big.length - 1][0] : from };
+  }
+  let extremesRun = null;
+  function refreshExtremes() {
+    if (extremesRun) return extremesRun;
+    const days = allDays();
+    const jobs = [];
+    days.forEach((day, i) => { if (isOpen(day.fecha, i)) for (const c of day.monedas) if (API[c.mercado]) jobs.push([day.fecha, c]); });
+    if (!jobs.length) return Promise.resolve();
+    const status = $("track-ext");
+    let done = 0;
+    status.textContent = "Calculando mínimos y máximos…";
+    extremesRun = runPool(jobs, 4, async ([fecha, c]) => {
+      try { await updateExtremes(fecha, c); } catch (err) { /* moneda sin velas (p. ej. retirada): se deja como estaba */ }
+      status.textContent = "Mínimos y máximos: " + (++done) + "/" + jobs.length;
+    }).then(() => {
+      const keep = new Set(days.map((d) => d.fecha));  // se olvidan los de días borrados
+      for (const k of Object.keys(track.extremes)) if (!keep.has(k.split("|")[0])) delete track.extremes[k];
+      store.set("seguimiento-extremos", JSON.stringify(track.extremes));
+      track.extremesAt = Date.now();
+      status.textContent = "Mínimo y máximo desde cada escaneo, calculados a las " + timeOf(new Date().toISOString());
+    }).finally(() => { extremesRun = null; if (!$("view-track").hidden) renderTracking(); });
+    return extremesRun;
+  }
   function showTrackNotice(label, text) {
     const n = $("track-notice");
     n.textContent = "";
@@ -1594,8 +1660,12 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     return coins.map((c, i) => {
       const prices = track.prices[c.mercado];
       const now = prices ? prices.get(c.simbolo) : undefined;
-      const pct = now != null && c.precio ? (now - c.precio) / c.precio * 100 : null;
-      return Object.assign({}, c, { ahora: now == null ? null : now, pct, orden: i });
+      const pctOf = (v) => (v != null && c.precio ? (v - c.precio) / c.precio * 100 : null);
+      const ext = track.extremes[extKey(day.fecha, c)];
+      let min = ext ? ext.min : null, max = ext ? ext.max : null;
+      if (ext && now != null) { min = Math.min(min, now); max = Math.max(max, now); }
+      return Object.assign({}, c, { ahora: now == null ? null : now, pct: pctOf(now), orden: i,
+        min, max, minPct: pctOf(min), maxPct: pctOf(max) });
     });
   }
   function summarize(coins) {
@@ -1626,6 +1696,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     states[fecha] = !isOpen(fecha, index);
     store.set("seguimiento-abiertos", JSON.stringify(states));
     renderTracking();
+    if (states[fecha]) refreshExtremes();
   }
   function deleteControl(fecha) {
     const wrap = h("span", { class: "confirm" });
@@ -1642,6 +1713,11 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     wrap.append(ask);
     return wrap;
   }
+  // Precio y, al lado, cuánto supone frente al precio del seguimiento.
+  function extremeCell(value, pct) {
+    if (value == null) return ["—"];
+    return [fmtPrice(value), h("small", { class: pct > 0 ? "up" : pct < 0 ? "down" : "", text: fmtPct(pct) })];
+  }
   function coinTable(day, coins) {
     const table = h("table", { class: "coins" });
     table.append(h("thead", null, h("tr", null,
@@ -1649,6 +1725,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       h("th", { class: "r", text: "Precio " + shortDate(day.fecha) }),
       h("th", { class: "r", text: "Precio actual" }),
       h("th", { class: "r", text: "Variación" }),
+      h("th", { class: "r", text: "Mínimo", title: "Precio más bajo desde el escaneo" }),
+      h("th", { class: "r", text: "Máximo", title: "Precio más alto desde el escaneo" }),
       h("th", { class: "col-scan", text: "Escaneo" }))));
     const body = h("tbody");
     coins.forEach((c, i) => {
@@ -1658,6 +1736,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
         h("td", { class: "r num c-then", "data-label": shortDate(day.fecha), text: fmtPrice(c.precio) }),
         h("td", { class: "r num c-now", "data-label": "ahora", text: c.ahora == null ? "—" : fmtPrice(c.ahora) }),
         h("td", { class: "r num c-pct " + (c.pct == null ? "" : c.pct >= 0 ? "up" : "down") }, c.pct == null ? "—" : fmtPct(c.pct), changeBar(c.pct)),
+        h("td", { class: "r num c-min", "data-label": "mín" }, ...extremeCell(c.min, c.minPct)),
+        h("td", { class: "r num c-max", "data-label": "máx" }, ...extremeCell(c.max, c.maxPct)),
         h("td", { class: "col-scan muted", text: timeOf(c.hora) + (c.intervalo ? " · velas " + tfLabel(c.intervalo) : "") }));
       const open = () => openTrackedChart(day, coins, i);
       tr.addEventListener("click", open);
@@ -1744,7 +1824,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     state.view = coins.map((c) => ({
       mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c.ahora == null ? c.precio : c.ahora,
       var_24h_pct: null, vela_pct: null, vs_ma7_pct: null, ma7_vs_ma25_pct: null, vs_ma99_pct: null, velas_sobre_ma7: null,
-      _seguimiento: { fecha: day.fecha, precio: c.precio, hora: c.hora },
+      _seguimiento: { fecha: day.fecha, precio: c.precio, hora: c.hora, min: c.min, max: c.max, minPct: c.minPct, maxPct: c.maxPct },
     }));
     openViewer(index);
   }
@@ -1789,15 +1869,19 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     track.timer = null;
     if (!tracking) return;
     renderTracking();
-    loadRemote().then(() => { renderTracking(); refreshPrices(); });
-    track.timer = setInterval(() => { if (document.visibilityState === "visible") refreshPrices(); }, 60000);
+    loadRemote().then(() => { renderTracking(); refreshPrices(); refreshExtremes(); });
+    track.timer = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      refreshPrices();
+      if (Date.now() - track.extremesAt > 5 * 60000) refreshExtremes();
+    }, 60000);
   }
   for (const b of $("views").querySelectorAll("button")) {
     b.addEventListener("click", () => { location.hash = b.dataset.view === "track" ? "seguimiento" : ""; });
   }
   window.addEventListener("hashchange", () => showView(location.hash === "#seguimiento" ? "track" : "scan"));
   $("track-sort").addEventListener("change", (e) => { track.sort = e.target.value; store.set("seguimiento-orden", track.sort); renderTracking(); });
-  $("track-refresh").addEventListener("click", () => refreshPrices());
+  $("track-refresh").addEventListener("click", () => { refreshPrices(); refreshExtremes(); });
   $("gh-form").addEventListener("submit", connectGitHub);
   $("gh-cancel").addEventListener("click", () => showGhForm(false));
   track.sort = TRACK_SORTS[store.get("seguimiento-orden")] ? store.get("seguimiento-orden") : track.sort;
