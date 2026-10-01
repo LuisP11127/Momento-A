@@ -42,6 +42,22 @@ en los servidores de GitHub Actions:
 Los resultados aparecen en la página de cada ejecución (resumen con la tabla y enlaces a
 Binance) y se pueden descargar en CSV/JSON en **Artifacts**.
 
+### Gráficos interactivos
+
+Cada ejecución desde `main` publica en **https://luisp11127.github.io/Momento-A/** una página
+con el gráfico de cada criptomoneda que encontró el scanner:
+
+- Velas de **2h, 4h, 8h, 12h y 1D** con **MA(7)**, **MA(25)** y **MA(99)** (los colores de
+  Binance) y el volumen.
+- Acercar y alejar con la rueda del ratón, pellizcando en el móvil o con los botones **−** y
+  **+**; **Todo** muestra todas las velas, **Últimas** vuelve a las más recientes y
+  **Pantalla completa** agranda el gráfico.
+- Atajos de teclado: <kbd>↑</kbd> <kbd>↓</kbd> cambian de par y <kbd>1</kbd>–<kbd>5</kbd> de
+  temporalidad.
+
+Configuración (una sola vez): **Settings → Pages → Build and deployment → Source: GitHub
+Actions**.
+
 > GitHub solo activa la ejecución manual y la automática cuando el workflow está en la rama
 > principal (`main`).
 
@@ -96,6 +112,9 @@ python -m momento_a --mercado spot --tolerancia 1 --max-encima 5
 
 # Filtrar monedas con poco volumen y guardar los resultados
 python -m momento_a --volumen-min 5000000 --csv resultados.csv --json resultados.json
+
+# Crear la página de gráficos interactivos (ábrela en el navegador)
+python -m momento_a --html graficos.html
 
 # Ver todas las opciones
 python -m momento_a --help

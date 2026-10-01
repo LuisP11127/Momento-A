@@ -83,13 +83,43 @@ jobs:
           if [ "$PERMITIR_ROJA" = "true" ]; then args+=(--permitir-roja); fi
           if [ "$VELA_CERRADA" = "true" ]; then args+=(--vela-cerrada); fi
           python -m momento_a "${args[@]}" \
-            --csv resultados.csv --json resultados.json --markdown "$GITHUB_STEP_SUMMARY"
+            --csv resultados.csv --json resultados.json --markdown "$GITHUB_STEP_SUMMARY" \
+            --html sitio/index.html
 
-      - name: Guardar resultados (CSV y JSON)
+      - name: Guardar resultados (CSV, JSON y página de gráficos)
         uses: actions/upload-artifact@v6
         with:
           name: resultados-${{ github.run_number }}
           path: |
             resultados.csv
             resultados.json
+            sitio/index.html
           retention-days: 30
+
+      - name: Preparar la página de gráficos para GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: sitio
+
+  # Publica los gráficos del último escaneo en GitHub Pages (solo desde main).
+  pages:
+    needs: scan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Enlace a los gráficos
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          echo "## Gráficos interactivos: $PAGE_URL" >> "$GITHUB_STEP_SUMMARY"
