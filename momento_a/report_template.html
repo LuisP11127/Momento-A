@@ -399,7 +399,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   </div>
   <div class="ma-legend" id="v-legend"></div>
   <div class="big" id="big"></div>
-  <p class="hint">Rueda del ratón o pellizco para acercar y alejar · arrastra para moverte en el tiempo · ← → cambia de moneda · Esc cierra · el punto marca las temporalidades donde también se cumple la condición</p>
+  <p class="hint">Rueda del ratón o pellizco para acercar y alejar · arrastra para moverte en el tiempo · ← → cambia de moneda · Esc cierra · el punto marca las temporalidades donde también se cumple la condición · horas en UTC (la vela diaria abre a las 00:00 UTC)</p>
 </div>
 
 <script id="momento-data" type="application/json">__MOMENTO_DATA__</script>
@@ -504,8 +504,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     if (tf in it._sd) return it._sd[tf];
     const rows = rowsFor(it, tf);
     if (!rows) return (it._sd[tf] = null);
-    // Lightweight Charts dibuja en UTC: desplazamos a la hora local del navegador.
-    const time = (ms) => Math.floor(ms / 1000) - new Date(ms).getTimezoneOffset() * 60;
+    // En UTC, como cortan las velas en Binance (la diaria abre a las 00:00 UTC): así cada vela diaria
+    // lleva su fecha y las de 4h empiezan a las 00:00, 04:00… UTC.
+    const time = (ms) => Math.floor(ms / 1000);
     const candles = rows.map((k) => ({ time: time(k[0]), open: k[1], high: k[2], low: k[3], close: k[4] }));
     const closes = rows.map((k) => k[4]);
     const periods = state.data.medias || [7, 25, 99];
@@ -660,7 +661,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const add = (dt, dd) => meta.append(h("div", null, h("dt", { text: dt }), h("dd", { text: dd })));
     add("Velas", tfLabel(d.intervalo) + (cr.cerrada ? " cerradas" : ""));
     const when = new Date(d.generado);
-    add("Escaneo", isNaN(when) ? "-" : when.toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" }));
+    add("Escaneo", isNaN(when) ? "-" : when.toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }) + " UTC");
     const ok = passing();
     for (const [key, mk] of Object.entries(d.mercados)) {
       add(MARKET_NAMES[key] || mk.nombre || key, ok.filter((it) => it.mercado === key).length + " de " + (mk.analizadas ?? "?"));
@@ -828,6 +829,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     }
     const t = tokens();
     const chart = LightweightCharts.createChart(el, chartOptions(t, isBig));
+    if ((TF_MINUTES[tf] || 0) >= 1440) chart.applyOptions({ timeScale: { timeVisible: false } });  // velas de días: solo la fecha
     const d = decimals(it.precio);
     const priceFormat = { type: "price", precision: d, minMove: Math.pow(10, -d) };
     const candles = chart.addCandlestickSeries({ priceFormat });
@@ -1321,7 +1323,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       }
     });
     if (aborted) { status.textContent = "Escaneo detenido."; return; }
-    const done = "Escaneo terminado " + new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) + ".";
+    const done = "Escaneo terminado a las " + utcTimeOf(new Date().toISOString()) + ".";
     status.textContent = done;
     if (Object.keys(mercados).length) {
       const tfs = [...new Set([...CHART_TFS, opts.interval])].sort((a, b) => (TF_MINUTES[a] || 0) - (TF_MINUTES[b] || 0));
@@ -1385,8 +1387,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   const saveLocalDays = (days) => store.set("seguimiento", JSON.stringify(days));
   const deletedDays = () => readJSON("seguimiento-borrados", {});
   const saveDeletedDays = (days) => store.set("seguimiento-borrados", JSON.stringify(days));
+  // El día del seguimiento es el día UTC: cambia a las 00:00 UTC, cuando abre la nueva vela diaria.
   function todayKey(d = new Date()) {
-    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    return d.toISOString().slice(0, 10);
   }
   function dayDate(fecha) { const [y, m, d] = fecha.split("-").map(Number); return new Date(y, m - 1, d); }
   function dayTitle(fecha) {
@@ -1399,6 +1402,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const n = Math.round((dayDate(todayKey()) - dayDate(fecha)) / 86400000);
     return n <= 0 ? "hoy" : n === 1 ? "ayer" : "hace " + n + " días";
   }
+  const utcTimeOf = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toISOString().slice(11, 16) + " UTC"; };
   const timeOf = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }); };
   const coinKey = (c) => c.mercado + ":" + c.simbolo;
   // Une dos versiones del mismo día: cada moneda una vez, con el primer precio en que apareció.
@@ -1738,7 +1742,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
         h("td", { class: "r num c-pct " + (c.pct == null ? "" : c.pct >= 0 ? "up" : "down") }, c.pct == null ? "—" : fmtPct(c.pct), changeBar(c.pct)),
         h("td", { class: "r num c-min", "data-label": "mín" }, ...extremeCell(c.min, c.minPct)),
         h("td", { class: "r num c-max", "data-label": "máx" }, ...extremeCell(c.max, c.maxPct)),
-        h("td", { class: "col-scan muted", text: timeOf(c.hora) + (c.intervalo ? " · velas " + tfLabel(c.intervalo) : "") }));
+        h("td", { class: "col-scan muted", text: utcTimeOf(c.hora) + (c.intervalo ? " · velas " + tfLabel(c.intervalo) : "") }));
       const open = () => openTrackedChart(day, coins, i);
       tr.addEventListener("click", open);
       tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });

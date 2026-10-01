@@ -74,6 +74,11 @@ filtros en ese momento, con su precio, en un apartado **«Seguimiento 1 de octub
 octubre»**… Si escaneas varias veces el mismo día, se añaden las monedas nuevas y cada una
 conserva el primer precio del día.
 
+Los días van en **UTC**, igual que las velas de Binance: el apartado del día cambia a las
+**00:00 UTC**, cuando abre la nueva vela diaria (un escaneo a las 21:30 del 1 de octubre en
+Lima, que son las 02:30 UTC del día 2, va a «Seguimiento 2 de octubre»). Las horas de los
+escaneos y de los gráficos también se muestran en UTC.
+
 En la pestaña **Seguimiento**:
 
 - un apartado por día (el más reciente abierto) con el precio de entonces (fijo), el precio
