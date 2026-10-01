@@ -47,6 +47,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--top", type=int, default=0, metavar="N", help="mostrar solo los N primeros")
     p.add_argument("--csv", metavar="FICHERO", help="guardar los resultados en CSV")
     p.add_argument("--json", metavar="FICHERO", help="guardar los resultados en JSON")
+    p.add_argument("--markdown", metavar="FICHERO",
+                   help="guardar un informe en Markdown (lo usa el resumen de GitHub Actions)")
     p.add_argument("--hilos", type=int, default=8, help="descargas en paralelo (por defecto: 8)")
     p.add_argument("--spot-url", default=SPOT_URL, help=f"URL base de spot (por defecto: {SPOT_URL})")
     p.add_argument("--futuros-url", default=FUTURES_URL,
@@ -89,28 +91,49 @@ def describe(criteria: Criteria) -> str:
     return " · ".join(parts)
 
 
-def render_table(signals: Sequence[Signal], quote: str) -> str:
-    headers = ["MERCADO", "PAR", "PRECIO", "VELA %", "vs MA7 %", "MA7/MA25 %",
-               "vs MA99 %", "DÍAS≥MA7", f"VOL 1D ({quote})"]
-    rows = [
-        [
-            MARKET_LABELS[s.instrument.market],
-            s.instrument.symbol,
-            fmt_price(s.price),
-            f"{s.change_pct:+.2f}",
-            f"{s.dist_ma7_pct:+.2f}",
-            f"{s.gap_ma7_ma25_pct:+.2f}",
-            f"{s.dist_ma99_pct:+.2f}",
-            str(s.days_above_ma7),
-            fmt_volume(s.quote_volume),
-        ]
-        for s in signals
+def table_headers(quote: str) -> list[str]:
+    return ["MERCADO", "PAR", "PRECIO", "VELA %", "vs MA7 %", "MA7/MA25 %",
+            "vs MA99 %", "DÍAS≥MA7", f"VOL 1D ({quote})"]
+
+
+def table_row(s: Signal) -> list[str]:
+    return [
+        MARKET_LABELS[s.instrument.market],
+        s.instrument.symbol,
+        fmt_price(s.price),
+        f"{s.change_pct:+.2f}",
+        f"{s.dist_ma7_pct:+.2f}",
+        f"{s.gap_ma7_ma25_pct:+.2f}",
+        f"{s.dist_ma99_pct:+.2f}",
+        str(s.days_above_ma7),
+        fmt_volume(s.quote_volume),
     ]
+
+
+def render_table(signals: Sequence[Signal], quote: str) -> str:
+    headers = table_headers(quote)
+    rows = [table_row(s) for s in signals]
     widths = [max(len(h), *(len(r[i]) for r in rows)) for i, h in enumerate(headers)]
     # Las dos primeras columnas son texto (izquierda); el resto, números (derecha).
     def line(cells: Sequence[str]) -> str:
         return "  ".join(c.ljust(w) if i < 2 else c.rjust(w) for i, (c, w) in enumerate(zip(cells, widths)))
     return "\n".join([line(headers), line(["-" * w for w in widths]), *(line(r) for r in rows)])
+
+
+def render_markdown(signals: Sequence[Signal], quote: str, summary: Sequence[str]) -> str:
+    """Informe en Markdown (para el resumen de GitHub Actions); cada par enlaza a Binance."""
+    lines = ["## Momento-A · scanner MA 1D", "", *(f"- {line}" for line in summary), ""]
+    if not signals:
+        lines.append("Ningún par cumple los criterios ahora mismo.")
+        return "\n".join(lines) + "\n"
+    headers = table_headers(quote)
+    lines.append("| " + " | ".join(headers) + " |")
+    lines.append("|" + "|".join([":--", ":--"] + ["--:"] * (len(headers) - 2)) + "|")
+    for s in signals:
+        row = table_row(s)
+        row[1] = f"[{row[1]}]({s.instrument.url})"
+        lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines) + "\n"
 
 
 RECORD_FIELDS = (
@@ -193,9 +216,18 @@ def main(argv: Optional[Sequence[str]] = None, client: Optional[BinanceClient] =
         for m in MARKET_CHOICES[args.mercado]
     )
     candle = "última vela cerrada" if criteria.closed_candle else "vela del día en curso"
-    print(f"Velas 1D · {candle} · {len(result.instruments)} pares ({per_market})")
-    print(f"Criterios: {describe(criteria)}")
-    print(f"Coincidencias: {len(signals)}\n")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    summary = [
+        f"Velas 1D · {candle} · {now} · {len(result.instruments)} pares ({per_market})",
+        f"Criterios: {describe(criteria)}",
+        f"Coincidencias: {len(signals)}",
+    ]
+    for market, blocked in getattr(client, "fallbacks_used", {}).items():
+        summary.append(
+            f"{blocked} no está disponible desde esta ubicación (HTTP 451); "
+            f"datos de {MARKET_LABELS[market]} tomados de {client.base_urls[market]}"
+        )
+    print("\n".join(summary) + "\n")
     if shown:
         print(render_table(shown, quote))
     else:
@@ -212,4 +244,7 @@ def main(argv: Optional[Sequence[str]] = None, client: Optional[BinanceClient] =
     if args.json:
         write_json(args.json, signals)
         print(f"JSON guardado en {args.json}")
+    if args.markdown:
+        with open(args.markdown, "w", encoding="utf-8") as f:
+            f.write(render_markdown(shown, quote, summary))
     return 0

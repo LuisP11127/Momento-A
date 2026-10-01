@@ -91,8 +91,25 @@ def test_gives_up_after_max_retries():
         client.daily_candles(Instrument(SPOT, "BTCUSDT", "BTC", "USDT"))
 
 
-def test_geo_block_is_fatal():
-    client, _ = client_with([FakeResponse(451)])
+def test_geo_block_switches_spot_to_data_api():
+    client, session = client_with([FakeResponse(451), FakeResponse(200, {"symbols": []})])
+    assert client.instruments(SPOT) == []
+    assert session.calls[1][0] == "https://data-api.binance.vision/api/v3/exchangeInfo"
+    assert client.fallbacks_used == {SPOT: "https://api.binance.com"}
+
+
+def test_geo_block_switches_futures_to_www():
+    client, session = client_with([FakeResponse(451), FakeResponse(200, [])])
+    client.daily_candles(Instrument(FUTURES, "BTCUSDT", "BTC", "USDT"))
+    assert session.calls[1][0] == "https://www.binance.com/fapi/v1/klines"
+    # Las siguientes peticiones van directamente a la dirección alternativa.
+    session.responses.append(FakeResponse(200, []))
+    client.daily_candles(Instrument(FUTURES, "ETHUSDT", "ETH", "USDT"))
+    assert session.calls[2][0] == "https://www.binance.com/fapi/v1/klines"
+
+
+def test_geo_block_on_fallback_too_is_fatal():
+    client, _ = client_with([FakeResponse(451), FakeResponse(451)])
     with pytest.raises(BinanceFatalError, match="451"):
         client.instruments(SPOT)
 

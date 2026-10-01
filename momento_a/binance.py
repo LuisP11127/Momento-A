@@ -18,6 +18,11 @@ SPOT = "spot"
 FUTURES = "futures"
 MARKETS = (SPOT, FUTURES)
 
+# Binance bloquea api.binance.com y fapi.binance.com desde algunos países (por
+# ejemplo, EE. UU., donde están los servidores de GitHub Actions) con HTTP 451.
+# Estas direcciones sirven los mismos datos públicos y sí responden desde ahí.
+FALLBACK_URLS = {SPOT: "https://data-api.binance.vision", FUTURES: "https://www.binance.com"}
+
 # 150 velas bastan para la MA(99) y mantienen el peso de la petición en 2.
 KLINES_LIMIT = 150
 
@@ -87,7 +92,10 @@ class BinanceClient:
         self.base_urls = {SPOT: spot_url.rstrip("/"), FUTURES: futures_url.rstrip("/")}
         self.timeout = timeout
         self.max_retries = max_retries
+        # Mercados que han tenido que pasar a FALLBACK_URLS por un bloqueo 451.
+        self.fallbacks_used: dict[str, str] = {}
         self._local = threading.local()
+        self._lock = threading.Lock()
 
     def _session(self) -> requests.Session:
         # Una sesión por hilo: requests.Session no garantiza ser thread-safe.
@@ -98,8 +106,21 @@ class BinanceClient:
             self._local.session = session
         return session
 
+    def _switch_to_fallback(self, market: str, blocked_base: str) -> bool:
+        """Tras un 451 en ``blocked_base``, pasa a la URL alternativa (si queda alguna)."""
+        fallback = FALLBACK_URLS[market]
+        with self._lock:
+            if self.base_urls[market] != blocked_base:
+                return True  # otro hilo ya cambió de URL
+            if blocked_base == fallback:
+                return False
+            self.base_urls[market] = fallback
+            self.fallbacks_used[market] = blocked_base
+            return True
+
     def _get(self, market: str, path: str, params: Optional[dict] = None) -> Any:
-        url = self.base_urls[market] + path
+        base = self.base_urls[market]
+        url = base + path
         problem = ""
         wait = 0
         for attempt in range(self.max_retries + 1):
@@ -114,9 +135,10 @@ class BinanceClient:
             if resp.status_code == 200:
                 return resp.json()
             if resp.status_code == 451:
+                if self._switch_to_fallback(market, base):
+                    return self._get(market, path, params)
                 raise BinanceFatalError(
-                    f"Binance bloquea las peticiones desde tu ubicación (HTTP 451) en {url}. "
-                    "Para spot puedes probar --spot-url https://data-api.binance.vision"
+                    f"Binance bloquea las peticiones desde tu ubicación (HTTP 451) en {url}."
                 )
             if resp.status_code == 418:
                 raise BinanceFatalError(

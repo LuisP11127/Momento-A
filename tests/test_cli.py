@@ -58,6 +58,21 @@ def test_market_filter_and_exports(tmp_path, capsys):
     assert records[0]["mercado"] == "SPOT" and records[0]["ma7"] < records[0]["ma25"]
 
 
+def test_markdown_report_links_pairs_and_mentions_fallback(tmp_path, capsys):
+    client = sample_client()
+    client.fallbacks_used = {FUTURES: "https://fapi.binance.com"}
+    client.base_urls = {FUTURES: "https://www.binance.com"}
+    md_path = tmp_path / "r.md"
+    assert main(["--markdown", str(md_path)], client=client) == 0
+    out = capsys.readouterr().out
+    md = md_path.read_text(encoding="utf-8")
+
+    assert "datos de FUT tomados de https://www.binance.com" in out
+    assert "- Coincidencias: 2" in md
+    assert "| [BBBUSDT](https://www.binance.com/es/futures/BBBUSDT) | " in md
+    assert "CCCUSDT" not in md
+
+
 def test_no_matches_message(capsys):
     assert main(["--tolerancia", "0", "--max-encima", "0.1"], client=sample_client()) == 0
     assert "Ningún par cumple" in capsys.readouterr().out
