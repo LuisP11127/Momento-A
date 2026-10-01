@@ -116,3 +116,5 @@ def test_render_report_without_data_is_the_web_app():
     # Los criterios del workflow Scanner, como filtros que se aplican al momento.
     for field in ("f-tol", "f-max", "f-vol", "f-noma99", "f-red", "f-closed"):
         assert f'id="{field}"' in html
+    # Seguimiento: mínimo y máximo desde el escaneo.
+    assert '<option value="maximo">' in html and '<option value="minimo">' in html and 'id="track-ext"' in html

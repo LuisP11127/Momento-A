@@ -76,11 +76,14 @@ conserva el primer precio del día.
 
 En la pestaña **Seguimiento**:
 
-- un apartado por día (el más reciente abierto) con el precio de entonces, el precio actual y
-  la variación, y un resumen: media, cuántas suben y bajan, la mejor y la peor. Los precios se
-  piden a Binance desde tu navegador y se actualizan cada minuto;
-- filtros **Todos / Spot / Futuros / No repetidas** y orden por subida, bajada, moneda u orden
-  del escaneo;
+- un apartado por día (el más reciente abierto) con el precio de entonces (fijo), el precio
+  actual, la variación y el **mínimo** y el **máximo** desde la hora del escaneo (con su % frente
+  al precio de entonces), y un resumen: media, cuántas suben y bajan, la mejor y la peor. Los
+  precios se piden a Binance desde tu navegador y se actualizan cada minuto; el mínimo y el
+  máximo salen de las velas de Binance desde la hora exacta del escaneo y se recalculan cada
+  5 minutos y con **Actualizar precios** (solo se piden las velas nuevas);
+- filtros **Todos / Spot / Futuros / No repetidas** y orden por subida, bajada, mayor máximo,
+  peor mínimo, moneda u orden del escaneo;
 - al pulsar una moneda se abre su gráfico (1D por defecto) con una línea en el precio del
   seguimiento y una flecha en la vela de ese día;
 - **Borrar** quita un día.
