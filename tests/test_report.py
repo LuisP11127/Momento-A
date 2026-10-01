@@ -113,3 +113,6 @@ def test_render_report_without_data_is_the_web_app():
     html = render_report(None)
     assert embedded(html) is None
     assert 'id="scan-form"' in html and 'value="1d" selected' in html
+    # Los criterios del workflow Scanner, como filtros que se aplican al momento.
+    for field in ("f-tol", "f-max", "f-vol", "f-noma99", "f-red", "f-closed"):
+        assert f'id="{field}"' in html

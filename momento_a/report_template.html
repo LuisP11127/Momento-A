@@ -133,8 +133,14 @@ input[type="search"] { width: 13rem; max-width: 100%; }
 body.tracking .scan-only { display: none !important; }
 .seg.views { align-self: center; }
 .seg.views button { font-size: 15px; padding: 6px 14px; }
-.scan .check { gap: 6px; color: var(--fg); cursor: pointer; }
-.scan .check input { width: 16px; height: 16px; accent-color: var(--fg); margin: 0; }
+.scan .check, .filters .check { gap: 6px; color: var(--fg); cursor: pointer; }
+.scan .check input, .filters .check input { width: 16px; height: 16px; accent-color: var(--fg); margin: 0; }
+/* Filtros: se aplican al momento sobre lo escaneado, sin volver a descargar. */
+.filters { padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.filters-title { font: 600 11px/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.filters input[type="number"] { width: 8rem; max-width: 100%; padding: 7px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; color: var(--fg); font-family: var(--font-mono); }
+.filters input.short { width: 7.5rem; }
+.filters-note { font-size: 12.5px; color: var(--muted); }
 .track { display: grid; gap: 14px; }
 .track-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 .track-bar label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
@@ -255,19 +261,29 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
         <option value="1d" selected>1D</option><option value="1w">1W</option>
       </select>
     </label>
-    <label>Vol. mín. 24h
-      <input id="scan-minvol" type="number" min="0" step="100000" value="0" inputmode="numeric" aria-label="Volumen mínimo en 24 horas, en USDT"> USDT
-    </label>
-    <label title="Cuánto puede estar el precio por debajo de la MA(7) y seguir contando como «muy cerca»">Margen bajo MA7
-      <input id="scan-tol" class="short" type="number" min="0" max="50" step="0.5" value="2" inputmode="decimal" aria-label="Porcentaje máximo por debajo de la MA(7)"> %
-    </label>
-    <label class="check" title="Tendencia muy bajista: la MA(25) también por debajo de la MA(99)"><input id="scan-ma99" type="checkbox" checked> MA25 &lt; MA99</label>
-    <label class="check" title="La vela tiene que ir en verde (precio por encima de la apertura)"><input id="scan-green" type="checkbox" checked> Vela verde</label>
     <label class="check"><input id="scan-track" type="checkbox" checked> Guardar en seguimiento</label>
     <button class="btn primary" id="scan-go" type="submit">Escanear</button>
     <span class="scan-status" id="scan-status" aria-live="polite"></span>
   </form>
   <p class="notice scan-only" id="notice" hidden></p>
+
+  <div class="toolbar filters scan-only" id="filters" role="group" aria-label="Filtros">
+    <span class="filters-title">Filtros</span>
+    <label title="% máximo por debajo de la MA(7) para contar como «muy cerca»">Margen bajo MA7
+      <input id="f-tol" class="short" type="number" min="0" step="0.5" value="2" inputmode="decimal" aria-label="Porcentaje máximo por debajo de la MA(7)"> %
+    </label>
+    <label title="% máximo por encima de la MA(7); vacío = sin límite">Máx. sobre MA7
+      <input id="f-max" class="short" type="number" min="0" step="0.5" placeholder="sin límite" inputmode="decimal" aria-label="Porcentaje máximo por encima de la MA(7); vacío para no poner límite"> %
+    </label>
+    <label>Vol. mín. 24h
+      <input id="f-vol" type="number" min="0" step="100000" value="0" inputmode="numeric" aria-label="Volumen mínimo en 24 horas, en USDT"> USDT
+    </label>
+    <label class="check" title="Basta con MA7 &lt; MA25"><input id="f-noma99" type="checkbox"> No exigir MA25 &lt; MA99</label>
+    <label class="check"><input id="f-red" type="checkbox"> Incluir velas rojas</label>
+    <label class="check" title="Evaluar la última vela cerrada en vez de la vela en curso"><input id="f-closed" type="checkbox"> Vela cerrada</label>
+    <button class="btn small" id="f-reset" type="button">Restablecer</button>
+    <span class="filters-note" id="f-note"></span>
+  </div>
 
   <div class="toolbar scan-only" id="toolbar">
     <div class="seg" id="market" role="group" aria-label="Mercado"></div>
@@ -492,9 +508,11 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const volume = rows.map((k, i) => ({ time: candles[i].time, value: k[5], up: k[4] >= k[1] }));
     return (it._sd[tf] = { candles, raw, mas, volume });
   }
-  // Criterios del escaneo: MA7 < MA25 (y MA25 < MA99), precio cerca o encima de la MA7, vela verde.
-  const DEFAULT_CRIT = { tolerancia: 2, max_encima: null, ma99: true, verde: true, min_volumen: 0 };
-  function criteria() { return Object.assign({}, DEFAULT_CRIT, (state.data && state.data.criterios) || {}); }
+  // Filtros (los mismos criterios que el workflow Scanner): MA7 < MA25 siempre; MA25 < MA99, precio cerca o
+  // encima de la MA7, vela verde, volumen y vela cerrada se cambian en la barra «Filtros» y se aplican al momento.
+  const DEFAULT_FILTERS = { tolerancia: 2, max_encima: null, ma99: true, verde: true, cerrada: false, min_volumen: 0 };
+  state.filters = Object.assign({}, DEFAULT_FILTERS, readJSON("filtros", {}));
+  function criteria() { return state.filters; }
   function passes(open, close, f, m, s, crit) {
     if (f == null || m == null || !(f < m)) return false;  // la MA7 sigue debajo de la MA25
     if (crit.ma99 && !(s != null && m < s)) return false;  // muy bajista: MA25 < MA99
@@ -509,7 +527,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const sd = seriesData(it, tf);
     if (!sd) return null;
     const crit = criteria();
-    const i = sd.candles.length - 1 - (state.data.solo_cerradas ? 1 : 0);
+    const i = sd.candles.length - 1 - (crit.cerrada ? 1 : 0);
     const [f, m, s] = sd.raw.map((arr) => arr[i]);
     if (f == null || m == null || (crit.ma99 && s == null)) return null;
     const c = sd.candles[i];
@@ -539,6 +557,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     for (const [key, m] of Object.entries(data.mercados)) {
       for (const it of m.coincidencias || []) {
         const item = Object.assign({ mercado: key }, it);
+        // Los filtros se evalúan siempre con las velas del momento del escaneo; los gráficos pueden
+        // pedir velas nuevas a Binance (y sustituir item.velas) sin que cambie la lista.
+        item._scan = item.velas;
         if (fresh) {
           item._fresh = {};
           for (const tf of [data.intervalo, ...Object.keys(item.graficos || {})]) item._fresh[tf] = now;
@@ -550,11 +571,70 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     if (!SORTS[state.sort]) state.sort = "fuerza";
     $("sort").value = state.sort;
     if (!state.tf) state.tf = DEFAULT_TF;
+    // Un informe trae solo las monedas que cumplían sus criterios: los filtros empiezan en esos criterios
+    // (y solo pueden quitar monedas). Un escaneo de esta página trae todas las candidatas.
+    if (!data.candidatos && data.criterios) {
+      state.filters = Object.assign({}, DEFAULT_FILTERS, data.criterios, { cerrada: !!data.solo_cerradas });
+      writeFilterInputs(state.filters);
+    }
+    $("f-note").textContent = data.candidatos ? "" : "Informe: los filtros solo quitan monedas de las que trae.";
     $("toolbar").hidden = false;
+    $("filters").hidden = false;
     renderTf();
-    renderHeader();
     renderNotice();
+    applyFilters();
+  }
+
+  // Evalúa una moneda con los filtros a partir de sus velas de la temporalidad del escaneo.
+  // refMs: momento del escaneo, para saber qué vela estaba en curso.
+  function evaluateItem(it, crit, refMs) {
+    if (crit.min_volumen > 0 && !((it.volumen_24h || 0) >= crit.min_volumen)) return null;
+    let rows = it._scan || it.velas;
+    rows = Array.isArray(rows) ? rows : [];
+    if (crit.cerrada && rows.length) {
+      const ms = (TF_MINUTES[it.intervalo || state.data.intervalo] || 0) * 60000;
+      if (rows[rows.length - 1][0] + ms > refMs) rows = rows.slice(0, -1);  // quita la vela en curso
+    }
+    return evaluateRows(rows, crit);
+  }
+  function applyFilters() {
+    const crit = criteria();
+    const refMs = Date.parse(state.data.generado) || Date.now();
+    for (const it of state.items) {
+      const ev = evaluateItem(it, crit, refMs);
+      it._ok = !!ev;
+      if (ev) {
+        Object.assign(it, { vela_pct: ev.velaPct, ma7: ev.ma7, ma25: ev.ma25, ma99: ev.ma99, vs_ma7_pct: ev.vsMa7,
+          ma7_vs_ma25_pct: ev.gap, vs_ma99_pct: ev.vsMa99, velas_sobre_ma7: ev.bars });
+      }
+    }
+    renderHeader();
     renderGrid();
+  }
+  const passing = () => state.items.filter((it) => it._ok);
+  function readFilters() {
+    const val = (id, fallback) => { const v = parseFloat($(id).value); return isFinite(v) && v >= 0 ? v : fallback; };
+    return {
+      tolerancia: val("f-tol", DEFAULT_FILTERS.tolerancia),
+      max_encima: $("f-max").value.trim() === "" ? null : val("f-max", null),
+      min_volumen: val("f-vol", 0),
+      ma99: !$("f-noma99").checked, verde: !$("f-red").checked, cerrada: $("f-closed").checked,
+    };
+  }
+  function writeFilterInputs(f) {
+    $("f-tol").value = f.tolerancia;
+    $("f-max").value = f.max_encima == null ? "" : f.max_encima;
+    $("f-vol").value = f.min_volumen || 0;
+    $("f-noma99").checked = !f.ma99;
+    $("f-red").checked = !f.verde;
+    $("f-closed").checked = !!f.cerrada;
+  }
+  let filterTimer = null;
+  function onFilterInput() {
+    state.filters = readFilters();
+    store.set("filtros", JSON.stringify(state.filters));
+    clearTimeout(filterTimer);  // mientras se escribe, se espera un instante para no redibujar en cada tecla
+    filterTimer = setTimeout(() => { if (state.data) applyFilters(); }, 150);
   }
 
   // ---------- cabecera ----------
@@ -572,19 +652,20 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const meta = $("meta");
     meta.textContent = "";
     const add = (dt, dd) => meta.append(h("div", null, h("dt", { text: dt }), h("dd", { text: dd })));
-    add("Velas", tfLabel(d.intervalo) + (d.solo_cerradas ? " cerradas" : ""));
+    add("Velas", tfLabel(d.intervalo) + (cr.cerrada ? " cerradas" : ""));
     const when = new Date(d.generado);
     add("Escaneo", isNaN(when) ? "-" : when.toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" }));
+    const ok = passing();
     for (const [key, mk] of Object.entries(d.mercados)) {
-      add(MARKET_NAMES[key] || mk.nombre || key, (mk.coincidencias || []).length + " de " + (mk.analizadas ?? "?"));
+      add(MARKET_NAMES[key] || mk.nombre || key, ok.filter((it) => it.mercado === key).length + " de " + (mk.analizadas ?? "?"));
     }
     const seg = $("market");
     seg.textContent = "";
-    const options = [["todos", "Todos", state.items.length]];
+    const options = [["todos", "Todos", ok.length]];
     for (const key of Object.keys(d.mercados)) {
-      options.push([key, MARKET_NAMES[key] || key, state.items.filter((it) => it.mercado === key).length]);
+      options.push([key, MARKET_NAMES[key] || key, ok.filter((it) => it.mercado === key).length]);
     }
-    if (Object.keys(d.mercados).length > 1) options.push(["unicas", "No repetidas", uniqueItems(state.items).length]);
+    if (Object.keys(d.mercados).length > 1) options.push(["unicas", "No repetidas", uniqueItems(ok).length]);
     if (!options.some(([k]) => k === state.market)) state.market = "todos";
     for (const [key, label, n] of options) {
       const b = h("button", { type: "button", "aria-pressed": String(key === state.market) }, label, h("span", { class: "count", text: String(n) }));
@@ -689,8 +770,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const grid = $("grid");
     grid.textContent = "";
     const q = state.q.trim().toUpperCase();
-    const pool = state.market === "unicas" ? uniqueItems(state.items)
-      : state.items.filter((it) => state.market === "todos" || it.mercado === state.market);
+    const ok = passing();
+    const pool = state.market === "unicas" ? uniqueItems(ok)
+      : ok.filter((it) => state.market === "todos" || it.mercado === state.market);
     state.view = pool
       .filter((it) => !q || it.simbolo.toUpperCase().includes(q))
       .sort(SORTS[state.sort] || SORTS.fuerza);
@@ -702,9 +784,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     });
     const empty = $("empty");
     empty.hidden = state.view.length > 0;
-    empty.textContent = state.items.length === 0
-      ? "Ninguna moneda cumple la condición en este escaneo."
-      : "Ninguna moneda coincide con el filtro.";
+    empty.textContent = state.items.length === 0 ? "Ninguna moneda cumple la condición en este escaneo."
+      : ok.length === 0 ? "Ninguna moneda cumple los filtros. Prueba a ampliar el margen bajo la MA7 o a quitar alguna condición."
+      : "Ninguna moneda coincide con el mercado o la búsqueda.";
   }
 
   // ---------- gráficos ----------
@@ -784,6 +866,10 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       const entry = buildChart(el, it, false, tf);
       if (entry) minis.set(el, entry);
       refreshCard(el, it);
+      // «Cumple en» necesita las velas de cada temporalidad: las que falten se piden a Binance.
+      for (const t of intervals()) {
+        if (!rowsFor(it, t)) loadCandles(it, t).then((ok) => { if (ok && el.isConnected) refreshCard(el, it); });
+      }
     };
     if (isFresh(it, tf)) { draw(); return; }
     el.append(h("div", { class: "placeholder", text: "Cargando velas de " + tfLabel(tf) + "…" }));
@@ -1098,6 +1184,14 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     return { close: last[4], velaPct: pct(last[4], last[1]), ma7: f[i], ma25: m[i], ma99: s[i],
       vsMa7: pct(last[4], f[i]), gap: pct(f[i], m[i]), vsMa99: pct(last[4], s[i]), bars };
   }
+  // Candidata: MA7 por debajo de la MA25 en la vela en curso o en la última cerrada. El resto de
+  // condiciones son los filtros, que se aplican al momento sin volver a descargar.
+  function bearish(rows) {
+    const closes = rows.map((k) => k[4]);
+    const f = sma(closes, SCAN_PERIODS[0]), m = sma(closes, SCAN_PERIODS[1]);
+    const i = closes.length - 1;
+    return f[i] < m[i] || f[i - 1] < m[i - 1];
+  }
   const isStockTags = (tags) => (tags || []).some((t) => typeof t === "string" && t.toLowerCase().includes("stock"));
   async function loadStockList() {
     // 1) lista de productos de Binance; 2) copia publicada junto a la web (bstocks.json)
@@ -1137,17 +1231,16 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const candidates = symbols.map((s) => {
       const t = tickers.get(s.symbol) || {};
       return { info: s, volume: num(t.quoteVolume), change: num(t.priceChangePercent) };
-    }).filter((c) => !(opts.minVolume > 0) || (c.volume || 0) >= opts.minVolume);
+    });
 
-    const matches = [];
+    const found = [];
     let analyzed = 0, done = 0, failed = 0;
     await runPool(candidates, 8, async (c) => {
       try {
         const rows = (await api.get(cfg.klines, { symbol: c.info.symbol, interval: opts.interval, limit: SCAN_LIMIT }, cfg.klinesW(SCAN_LIMIT))).map(row);
         if (rows.length >= SCAN_PERIODS[2]) {
           analyzed++;
-          const ev = evaluateRows(rows, opts.crit);
-          if (ev) matches.push({ c, ev, rows, charts: {} });
+          if (bearish(rows)) found.push({ c, rows, charts: {} });
         }
       } catch (err) {
         if (err.fatal) throw err;
@@ -1158,6 +1251,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     });
     if (failed) notes.push(failed + " pares no respondieron");
 
+    // Gráficos en todas las temporalidades para las que cumplen los filtros ahora; las demás se piden si se muestran.
+    const crit = criteria(), now = Date.now();
+    const matches = found.filter((m) => evaluateItem({ velas: m.rows, intervalo: opts.interval, volumen_24h: m.c.volume }, crit, now));
     const tfs = [...new Set([...CHART_TFS, opts.interval])];
     const jobs = matches.flatMap((m) => tfs.map((tf) => [m, tf]));
     let charted = 0;
@@ -1177,14 +1273,13 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       notes.push("faltan gráficos en otras temporalidades (" + err.message + ")");
     }
 
-    const coincidencias = matches.map(({ c, ev, rows, charts }) => {
+    const coincidencias = found.map(({ c, rows, charts }) => {
       const graficos = {};
       for (const [tf, data] of Object.entries(charts)) if (tf !== opts.interval) graficos[tf] = data;
       return {
         mercado: key, intervalo: opts.interval, simbolo: c.info.symbol, base: c.info.baseAsset, quote: c.info.quoteAsset,
-        precio: ev.close, vela_pct: ev.velaPct, ma7: ev.ma7, ma25: ev.ma25, ma99: ev.ma99,
-        vs_ma7_pct: ev.vsMa7, ma7_vs_ma25_pct: ev.gap, vs_ma99_pct: ev.vsMa99, velas_sobre_ma7: ev.bars,
-        var_24h_pct: c.change, volumen_24h: c.volume, velas: charts[opts.interval] || rows, graficos,
+        precio: rows[rows.length - 1][4], var_24h_pct: c.change, volumen_24h: c.volume,
+        velas: charts[opts.interval] || rows, graficos,
       };
     });
     return { market: { nombre: cfg.nombre, quote: opts.quote, analizadas: analyzed, coincidencias }, notes };
@@ -1193,14 +1288,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   async function startScan(event) {
     event.preventDefault();
     if (scanController) { scanController.abort(); return; }
-    const tolerance = parseFloat($("scan-tol").value);
     const opts = {
-      market: $("scan-market").value, interval: $("scan-interval").value, quote: "USDT",
-      minVolume: Math.max(0, parseFloat($("scan-minvol").value) || 0), track: $("scan-track").checked,
-      tolerance: isFinite(tolerance) && tolerance >= 0 ? tolerance : DEFAULT_CRIT.tolerancia,
-      ma99: $("scan-ma99").checked, green: $("scan-green").checked,
+      market: $("scan-market").value, interval: $("scan-interval").value, quote: "USDT", track: $("scan-track").checked,
     };
-    opts.crit = { tolerancia: opts.tolerance, max_encima: null, ma99: opts.ma99, verde: opts.green, min_volumen: opts.minVolume };
     store.set("scan", JSON.stringify(opts));
     const keys = opts.market === "ambos" ? ["spot", "futures"] : [opts.market];
     const go = $("scan-go"), status = $("scan-status");
@@ -1225,7 +1315,16 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     if (aborted) { status.textContent = "Escaneo detenido."; return; }
     const done = "Escaneo terminado " + new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) + ".";
     status.textContent = done;
-    const fecha = opts.track ? recordScan(mercados, opts.interval) : null;
+    if (Object.keys(mercados).length) {
+      const tfs = [...new Set([...CHART_TFS, opts.interval])].sort((a, b) => (TF_MINUTES[a] || 0) - (TF_MINUTES[b] || 0));
+      setData({
+        generado: new Date().toISOString(), intervalo: opts.interval, intervalos_grafico: tfs, medias: SCAN_PERIODS,
+        criterios: Object.assign({}, criteria()), solo_cerradas: criteria().cerrada, candidatos: true,
+        orden: state.sort, ejemplo: false, mercados,
+      }, true);
+    }
+    // Al seguimiento van las monedas que cumplen los filtros en el momento del escaneo.
+    const fecha = opts.track && Object.keys(mercados).length ? recordScan(passing(), opts.interval) : null;
     if (fecha) {
       const saved = done + " Guardado en «Seguimiento " + dayTitle(fecha) + "»";
       status.textContent = saved + (ghConfig() ? "; subiendo a GitHub…" : " de este navegador.");
@@ -1235,13 +1334,6 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
         });
       }
     }
-    if (Object.keys(mercados).length) {
-      const tfs = [...new Set([...CHART_TFS, opts.interval])].sort((a, b) => (TF_MINUTES[a] || 0) - (TF_MINUTES[b] || 0));
-      setData({
-        generado: new Date().toISOString(), intervalo: opts.interval, intervalos_grafico: tfs, medias: SCAN_PERIODS,
-        criterios: opts.crit, solo_cerradas: false, orden: state.sort, ejemplo: false, mercados,
-      }, true);
-    }
     if (problems.length) renderNotice("Aviso. ", problems.join(" "), !Object.keys(mercados).length);
   }
   $("scan-form").addEventListener("submit", startScan);
@@ -1250,19 +1342,21 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     if (saved) {
       if (saved.market) $("scan-market").value = saved.market;
       if (saved.interval) $("scan-interval").value = saved.interval;
-      if (saved.minVolume != null) $("scan-minvol").value = saved.minVolume;
-      if (saved.tolerance != null) $("scan-tol").value = saved.tolerance;
-      if (saved.ma99 === false) $("scan-ma99").checked = false;
-      if (saved.green === false) $("scan-green").checked = false;
       if (saved.track === false) $("scan-track").checked = false;
     }
   } catch (err) { /* preferencias no válidas */ }
+  writeFilterInputs(state.filters);
+  for (const id of ["f-tol", "f-max", "f-vol", "f-noma99", "f-red", "f-closed"]) {
+    $(id).addEventListener("input", onFilterInput);
+    $(id).addEventListener("change", onFilterInput);
+  }
+  $("f-reset").addEventListener("click", () => { writeFilterInputs(DEFAULT_FILTERS); onFilterInput(); });
 
   // ---------- seguimiento ----------
   // Cada escaneo guarda las monedas encontradas con su precio en «Seguimiento <día>». Se guarda en este
   // navegador y, si se conecta, también en el repositorio de GitHub (docs/seguimiento/AAAA-MM-DD.json).
   // La web publicada lee todos los días de seguimiento.json, que el workflow «Web» genera con esos archivos.
-  const TRACK_CTX = { intervalo: "1d", intervalos_grafico: CHART_TFS, medias: SCAN_PERIODS, criterios: DEFAULT_CRIT, solo_cerradas: false, ejemplo: false, mercados: {} };
+  const TRACK_CTX = { intervalo: "1d", intervalos_grafico: CHART_TFS, medias: SCAN_PERIODS, criterios: DEFAULT_FILTERS, solo_cerradas: false, ejemplo: false, mercados: {} };
   const TRACK_SORTS = {
     subida: (a, b) => (b.pct ?? -Infinity) - (a.pct ?? -Infinity),
     bajada: (a, b) => (a.pct ?? Infinity) - (b.pct ?? Infinity),
@@ -1317,14 +1411,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     for (const [fecha, day] of Object.entries(local)) out[fecha] = out[fecha] ? mergeDay(out[fecha], day) : day;
     return Object.values(out).filter((d) => d.monedas && d.monedas.length).sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   }
-  function recordScan(mercados, interval) {
+  function recordScan(items, interval) {
     const now = new Date(), fecha = todayKey(now), hora = now.toISOString();
-    const monedas = [];
-    for (const m of Object.values(mercados)) {
-      for (const c of m.coincidencias || []) {
-        monedas.push({ mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c.precio, hora, intervalo: interval });
-      }
-    }
+    const monedas = items.map((c) => ({ mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c.precio, hora, intervalo: interval }));
     if (!monedas.length) return null;
     const days = localDays();
     days[fecha] = Object.assign(mergeDay(days[fecha], { fecha, monedas }), { pendiente: true });
@@ -1722,7 +1811,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     setData(initial);
   } else {
     $("toolbar").hidden = true;
-    renderNotice("Listo para escanear. ", "Pulsa «Escanear» para buscar en Binance las monedas en tendencia bajista (MA(7) < MA(25) < MA(99)) cuya vela está muy cerca o por encima de la MA(7). También puedes abrir un informe con «Cargar informe».");
+    $("filters").hidden = true;
+    renderNotice("Listo para escanear. ", "Pulsa «Escanear» para buscar en Binance las monedas en tendencia bajista (MA(7) < MA(25) < MA(99)) cuya vela está muy cerca o por encima de la MA(7); después ajusta los filtros y la lista se actualiza al momento. También puedes abrir un informe con «Cargar informe».");
   }
   if (!window.LightweightCharts) {
     renderNotice("Sin gráficos. ", "No se pudo cargar la librería de gráficos; revisa tu conexión a internet.", true);
