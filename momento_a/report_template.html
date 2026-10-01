@@ -399,7 +399,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   </div>
   <div class="ma-legend" id="v-legend"></div>
   <div class="big" id="big"></div>
-  <p class="hint">Rueda del ratón o pellizco para acercar y alejar · arrastra para moverte en el tiempo · ← → cambia de moneda · Esc cierra · el punto marca las temporalidades donde también se cumple la condición</p>
+  <p class="hint">Rueda del ratón o pellizco para acercar y alejar · arrastra para moverte en el tiempo · ← → cambia de moneda · Esc cierra · el punto marca las temporalidades donde también se cumple la condición · horas en tu zona horaria: la vela diaria abre a las 00:00 UTC<span id="day-open"></span></p>
 </div>
 
 <script id="momento-data" type="application/json">__MOMENTO_DATA__</script>
@@ -504,7 +504,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     if (tf in it._sd) return it._sd[tf];
     const rows = rowsFor(it, tf);
     if (!rows) return (it._sd[tf] = null);
-    // Lightweight Charts dibuja en UTC: desplazamos a la hora local del navegador.
+    // En la hora de tu navegador, como Binance con tu zona horaria: la vela diaria abre a las 00:00 UTC
+    // (7:00 pm en Lima) y lleva la fecha en que abre en tu hora. Lightweight Charts dibuja en UTC, así
+    // que se desplaza cada vela a la hora local.
     const time = (ms) => Math.floor(ms / 1000) - new Date(ms).getTimezoneOffset() * 60;
     const candles = rows.map((k) => ({ time: time(k[0]), open: k[1], high: k[2], low: k[3], close: k[4] }));
     const closes = rows.map((k) => k[4]);
@@ -828,6 +830,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     }
     const t = tokens();
     const chart = LightweightCharts.createChart(el, chartOptions(t, isBig));
+    if ((TF_MINUTES[tf] || 0) >= 1440) chart.applyOptions({ timeScale: { timeVisible: false } });  // velas de días: solo la fecha
     const d = decimals(it.precio);
     const priceFormat = { type: "price", precision: d, minMove: Math.pow(10, -d) };
     const candles = chart.addCandlestickSeries({ priceFormat });
@@ -1321,7 +1324,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       }
     });
     if (aborted) { status.textContent = "Escaneo detenido."; return; }
-    const done = "Escaneo terminado " + new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) + ".";
+    const done = "Escaneo terminado a las " + timeOf(new Date().toISOString()) + ".";
     status.textContent = done;
     if (Object.keys(mercados).length) {
       const tfs = [...new Set([...CHART_TFS, opts.interval])].sort((a, b) => (TF_MINUTES[a] || 0) - (TF_MINUTES[b] || 0));
@@ -1385,9 +1388,15 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   const saveLocalDays = (days) => store.set("seguimiento", JSON.stringify(days));
   const deletedDays = () => readJSON("seguimiento-borrados", {});
   const saveDeletedDays = (days) => store.set("seguimiento-borrados", JSON.stringify(days));
+  // El día del seguimiento es la vela diaria de Binance en curso: abre a las 00:00 UTC y se nombra con la
+  // fecha en que abre en tu hora, como la muestra Binance con tu zona horaria. En Lima (UTC−5) la vela abre
+  // a las 7:00 pm: de las 7:00 pm del 30 de septiembre a las 6:59 pm del 1 de octubre es «30 de septiembre».
   function todayKey(d = new Date()) {
-    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    const open = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    return open.getFullYear() + "-" + String(open.getMonth() + 1).padStart(2, "0") + "-" + String(open.getDate()).padStart(2, "0");
   }
+  // Día de la vela en que se escaneó una moneda.
+  function candleDayOf(iso, fallback) { const t = new Date(iso); return isNaN(t) ? fallback : todayKey(t); }
   function dayDate(fecha) { const [y, m, d] = fecha.split("-").map(Number); return new Date(y, m - 1, d); }
   function dayTitle(fecha) {
     const date = dayDate(fecha);
@@ -1419,7 +1428,29 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const local = localDays(), deleted = deletedDays(), out = {};
     for (const [fecha, day] of Object.entries(track.remote)) if (!deleted[fecha]) out[fecha] = day;
     for (const [fecha, day] of Object.entries(local)) out[fecha] = out[fecha] ? mergeDay(out[fecha], day) : day;
-    return Object.values(out).filter((d) => d.monedas && d.monedas.length).sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+    // Cada moneda va al día de la vela en que se escaneó (por si algo se guardó con otra regla).
+    const byCandle = {};
+    for (const day of Object.values(out)) {
+      for (const c of day.monedas || []) {
+        const key = candleDayOf(c.hora, day.fecha);
+        byCandle[key] = mergeDay(byCandle[key], { fecha: key, monedas: [c] });
+      }
+    }
+    return Object.values(byCandle).filter((d) => d.monedas && d.monedas.length).sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+  }
+  // Una vez: los días guardados en este navegador con la regla anterior (medianoche local) pasan al día de su vela.
+  function migrateLocalDays() {
+    const days = localDays(), out = {};
+    let moved = false;
+    for (const [fecha, day] of Object.entries(days)) {
+      for (const c of day.monedas || []) {
+        const key = candleDayOf(c.hora, fecha);
+        if (key !== fecha) moved = true;
+        const pending = !!((out[key] && out[key].pendiente) || day.pendiente);
+        out[key] = Object.assign(mergeDay(out[key], { fecha: key, monedas: [c] }), { pendiente: pending });
+      }
+    }
+    if (moved) saveLocalDays(out);
   }
   function recordScan(items, interval) {
     const now = new Date(), fecha = todayKey(now), hora = now.toISOString();
@@ -1887,6 +1918,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   track.sort = TRACK_SORTS[store.get("seguimiento-orden")] ? store.get("seguimiento-orden") : track.sort;
 
   // ---------- arranque ----------
+  migrateLocalDays();
+  { const n = new Date(); $("day-open").textContent = " (las " + timeOf(new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate())).toISOString()) + " en tu hora)"; }
   state.sort = store.get("sort") || state.sort;
   setSize(store.get("size") || "l");
   let initial = null;

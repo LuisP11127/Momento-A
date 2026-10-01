@@ -74,6 +74,18 @@ filtros en ese momento, con su precio, en un apartado **«Seguimiento 1 de octub
 octubre»**… Si escaneas varias veces el mismo día, se añaden las monedas nuevas y cada una
 conserva el primer precio del día.
 
+Cada apartado es **la vela diaria de Binance**: cambia a las **00:00 UTC**, cuando abre la vela
+nueva, y se nombra con la fecha en que abre en tu hora, igual que la muestra Binance con tu
+zona horaria. En Lima (UTC−5) la vela abre a las **7:00 pm**:
+
+| Escaneo (hora de Lima) | Vela de Binance | Apartado |
+|---|---|---|
+| 1 de octubre, 2:39 pm | abrió el 30 de septiembre a las 7:00 pm | «Seguimiento 30 de septiembre» |
+| 1 de octubre, 7:30 pm | abrió el 1 de octubre a las 7:00 pm | «Seguimiento 1 de octubre» |
+| 2 de octubre, 8:00 am | sigue la del 1 de octubre | «Seguimiento 1 de octubre» |
+
+Los gráficos y las horas se muestran en tu zona horaria, como en Binance.
+
 En la pestaña **Seguimiento**:
 
 - un apartado por día (el más reciente abierto) con el precio de entonces (fijo), el precio
