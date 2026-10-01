@@ -28,7 +28,24 @@ futuros, los contratos trimestrales y los que no son criptomonedas (índices com
 Los pares con menos de 99 velas diarias (listados hace poco) no se pueden evaluar porque no
 tienen MA(99).
 
-## Instalación
+## Ejecutarlo desde GitHub (sin instalar nada)
+
+El workflow [`.github/workflows/scanner.yml`](.github/workflows/scanner.yml) ejecuta el scanner
+en los servidores de GitHub Actions:
+
+- **A mano:** pestaña **Actions** → **Scanner MA 1D** → **Run workflow**. Puedes elegir
+  mercado, tolerancia, orden, etc. en el formulario.
+- **Automático** (horas UTC): a las 00:17, justo después del cierre diario, con la vela ya
+  cerrada (señales confirmadas), y a las 12:17 y 18:17 con la vela en curso. Las horas se
+  cambian en la sección `schedule` del workflow.
+
+Los resultados aparecen en la página de cada ejecución (resumen con la tabla y enlaces a
+Binance) y se pueden descargar en CSV/JSON en **Artifacts**.
+
+> GitHub solo activa la ejecución manual y la automática cuando el workflow está en la rama
+> principal (`main`).
+
+## Instalación local
 
 Necesitas Python 3.9 o superior.
 
@@ -93,10 +110,10 @@ Binance.
 
 ## Problemas de conexión
 
-- **HTTP 451**: Binance bloquea su API desde algunos países (por ejemplo, EE. UU.). Para
-  spot puedes usar el espejo público de datos:
-  `python -m momento_a --spot-url https://data-api.binance.vision`. Los futuros no tienen
-  espejo; desde esos países solo funcionará `--mercado spot` con ese espejo.
+- **HTTP 451**: Binance bloquea `api.binance.com` y `fapi.binance.com` desde algunos países
+  (por ejemplo, EE. UU., donde están los servidores de GitHub). El scanner lo detecta y pasa
+  solo a `data-api.binance.vision` (spot) y `www.binance.com` (futuros), que sirven los mismos
+  datos públicos; lo indica en la cabecera del resultado.
 - **HTTP 418 / 429**: demasiadas peticiones. El scanner espera y reintenta solo; si
   vuelve a pasar, baja las descargas en paralelo con `--hilos 4`.
 

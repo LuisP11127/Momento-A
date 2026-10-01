@@ -89,7 +89,7 @@ jobs:
             --csv resultados.csv --json resultados.json --markdown "$GITHUB_STEP_SUMMARY"
 
       - name: Guardar resultados (CSV y JSON)
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: resultados-${{ github.run_number }}
           path: |
