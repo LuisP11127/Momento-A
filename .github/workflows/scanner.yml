@@ -44,9 +44,6 @@ on:
     - cron: "17 0 * * *"
     # Durante el día: vela en curso.
     - cron: "17 12,18 * * *"
-  # TEMPORAL: para probar el workflow en esta rama.
-  push:
-    branches: [claude/nice-maxwell-o13it6]
 
 permissions:
   contents: read
