@@ -1,4 +1,5 @@
 import pytest
+import requests
 
 from momento_a import binance
 from momento_a.binance import FUTURES, SPOT, BinanceClient, BinanceError, BinanceFatalError, Instrument
@@ -13,6 +14,10 @@ class FakeResponse:
 
     def json(self):
         return self._payload
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.HTTPError(f"HTTP {self.status_code}")
 
 
 class FakeSession:
@@ -117,3 +122,21 @@ def test_geo_block_on_fallback_too_is_fatal():
 def test_instrument_urls():
     assert Instrument(SPOT, "BTCUSDT", "BTC", "USDT").url.endswith("/trade/BTC_USDT?type=spot")
     assert Instrument(FUTURES, "BTCUSDT", "BTC", "USDT").url.endswith("/futures/BTCUSDT")
+
+
+def test_tickers_24h_by_symbol_and_market_endpoint():
+    client, session = client_with([FakeResponse(200, [{"symbol": "BTCUSDT", "quoteVolume": "5"}, {"x": 1}])])
+    assert client.tickers_24h(FUTURES) == {"BTCUSDT": {"symbol": "BTCUSDT", "quoteVolume": "5"}}
+    assert session.calls[0][0] == "https://fapi.binance.com/fapi/v1/ticker/24hr"
+
+
+def test_asset_tags_from_binance_products():
+    products = {"data": [{"s": "AAPLBUSDT", "tags": ["bStocks"]}, {"s": "BTCUSDT", "tags": None}, "raro"]}
+    client, session = client_with([FakeResponse(200, products)])
+    assert client.asset_tags() == {"AAPLBUSDT": ["bStocks"], "BTCUSDT": []}
+    assert session.calls[0][0] == binance.PRODUCTS_URL
+    # Cualquier fallo de esa web se trata como «sin datos».
+    client, _ = client_with([FakeResponse(403, {})])
+    assert client.asset_tags() is None
+    client, _ = client_with([FakeResponse(200, {"data": "otro formato"})])
+    assert client.asset_tags() is None
