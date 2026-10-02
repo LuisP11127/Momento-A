@@ -387,6 +387,114 @@
    "precio": 4174.37,
    "hora": "2026-10-01T19:41:00.223Z",
    "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "PORTALUSDT",
+   "base": "PORTAL",
+   "quote": "USDT",
+   "precio": 0.01776,
+   "hora": "2026-10-02T06:23:31.447Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "CATIUSDT",
+   "base": "CATI",
+   "quote": "USDT",
+   "precio": 0.06168,
+   "hora": "2026-10-02T06:23:31.447Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "WLFIUSDT",
+   "base": "WLFI",
+   "quote": "USDT",
+   "precio": 0.0562,
+   "hora": "2026-10-02T06:23:31.447Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "PORTALUSDT",
+   "base": "PORTAL",
+   "quote": "USDT",
+   "precio": 0.01776,
+   "hora": "2026-10-02T06:23:31.447Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "CATIUSDT",
+   "base": "CATI",
+   "quote": "USDT",
+   "precio": 0.06166,
+   "hora": "2026-10-02T06:23:31.447Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "AIOUSDT",
+   "base": "AIO",
+   "quote": "USDT",
+   "precio": 0.03852,
+   "hora": "2026-10-02T06:23:31.447Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "WLFIUSDT",
+   "base": "WLFI",
+   "quote": "USDT",
+   "precio": 0.05623,
+   "hora": "2026-10-02T06:23:31.447Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "TRUTHUSDT",
+   "base": "TRUTH",
+   "quote": "USDT",
+   "precio": 0.014699,
+   "hora": "2026-10-02T06:23:31.447Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "UAIUSDT",
+   "base": "UAI",
+   "quote": "USDT",
+   "precio": 0.3584,
+   "hora": "2026-10-02T06:23:31.447Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "SPORTFUNUSDT",
+   "base": "SPORTFUN",
+   "quote": "USDT",
+   "precio": 0.01803,
+   "hora": "2026-10-02T06:23:31.447Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "我踏马来了USDT",
+   "base": "我踏马来了",
+   "quote": "USDT",
+   "precio": 0.012245,
+   "hora": "2026-10-02T06:23:31.447Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "龙虾USDT",
+   "base": "龙虾",
+   "quote": "USDT",
+   "precio": 0.03086,
+   "hora": "2026-10-02T06:23:31.447Z",
+   "intervalo": "1d"
   }
  ]
 }
