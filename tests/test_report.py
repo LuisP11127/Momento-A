@@ -118,3 +118,6 @@ def test_render_report_without_data_is_the_web_app():
         assert f'id="{field}"' in html
     # Seguimiento: mínimo y máximo desde el escaneo.
     assert '<option value="maximo">' in html and '<option value="minimo">' in html and 'id="track-ext"' in html
+    # Logo propio en la pestaña del navegador, en el móvil y en la cabecera.
+    assert 'rel="icon" type="image/svg+xml" href="data:image/svg+xml,' in html and 'rel="apple-touch-icon"' in html
+    assert '<svg class="logo"' in html

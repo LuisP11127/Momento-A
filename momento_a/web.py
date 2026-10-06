@@ -18,6 +18,7 @@ from .report import render_report
 
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 COIN_FIELDS = ("mercado", "simbolo", "base", "quote", "precio", "hora", "intervalo")
+STAR_FIELDS = ("estrella", "estrella_hora")  # solo en las monedas a las que alguna vez se puso estrella
 
 
 def collect_tracking(folder: Path) -> list[dict]:
@@ -41,11 +42,14 @@ def collect_tracking(folder: Path) -> list[dict]:
         if not fecha:
             print(f"Aviso: {path} no indica la fecha; se ignora.")
             continue
-        coins = [
-            {field: coin.get(field) for field in COIN_FIELDS}
-            for coin in data["monedas"]
-            if isinstance(coin, dict) and coin.get("mercado") and coin.get("simbolo")
-        ]
+        coins = []
+        for coin in data["monedas"]:
+            if not (isinstance(coin, dict) and coin.get("mercado") and coin.get("simbolo")):
+                continue
+            item = {field: coin.get(field) for field in COIN_FIELDS}
+            if coin.get("estrella_hora"):
+                item.update(estrella=bool(coin.get("estrella")), estrella_hora=coin["estrella_hora"])
+            coins.append(item)
         days[fecha] = {"fecha": fecha, "monedas": coins}
     return [days[fecha] for fecha in sorted(days, reverse=True)]
 
