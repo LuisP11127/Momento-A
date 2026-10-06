@@ -127,7 +127,7 @@
    "hora": "2026-10-06T18:15:34.833Z",
    "intervalo": "1d",
    "estrella": false,
-   "estrella_hora": "2026-10-06T20:24:58.397Z"
+   "estrella_hora": "2026-10-06T20:26:04.691Z"
   },
   {
    "mercado": "spot",
@@ -325,7 +325,9 @@
    "quote": "USDT",
    "precio": 0.9993,
    "hora": "2026-10-06T18:15:34.833Z",
-   "intervalo": "1d"
+   "intervalo": "1d",
+   "estrella": false,
+   "estrella_hora": "2026-10-06T20:26:10.263Z"
   },
   {
    "mercado": "spot",
