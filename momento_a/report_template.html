@@ -1,4 +1,10 @@
 <title>Momento-A Scanner</title>
+<!-- Logo: velas bajistas bajo la MA(7) y una vela verde que la rompe. -->
+<link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADk0lEQVR4nLxXWUiUURT+/mV+Z0bTscU2KKOFMKPMLCsphLAFiiCpXtrDHqKHoIcespd6DIKCiGh76SFTCNI0SytCcV/CUkjQjCY3dFxmc/6le285zjgz5oz+fnA5c/65957vP+ee858rwhcWi8UM6Qo0pHPgNoNDAmYDGno1aE1kvyoHxu7AZrON/8WN/zDHLjoAnntEDC+DjiBErFC1C47hvmIvgejYhH3EeAnmEJqqHqQkOMTFxZu5qK/kzZdCB8RkJTM5WtriT4B4wqG6NvImznhaL+OMwO71bEwGDbWJN50SeXLgaCBe3nAgaaWKj80CyhoEIkUMjPDQE9S2qHH0xAOiQJIgBjiyS2FD09xobBdQUiuivJFHa5cY1ubG1EQY1y6BmBDLdMuJdLi+d8NV3+mdw2xHWxZrVOE4DSlrFGRuUrBvq4INq1S/Da39QFGNAeXEO5XfBMgKNyWBFU9zIMRH+z1TBu3oOvvQ75mXgC92xi9CQUY67mulWJ00iIxkBaaoCYPDdrBQvasX8L5BxLAjMFSrXl1BMHQcueOnh/ar24Sy2ljcLHTDKGnYs0nG3hTinTQZC4hXD+9U2FAUN/GIiDfVAgqrwj83AR7I37oHu+Yv9uoVAz3IrvvkM4OGSsXeLTKyUhUkJU6ESlU1VLUKeFtHDnLONUzHAwEEfmcdC1i0tDQPobB8oYpDO2Qc3CYjdd0EmYyo3GkRiDjP5hsk3EveDueQEQ9eSzica8bmi2bkPpVI5ggh1z2+6mThnDGB9TFxyF62kslx9Nl4PCmRcP62KeS6/WkK7l5yefXwknsWcOOZhHYrPzMCvge1IC0zyEENjcfFkp8eEQHfLAmmh4OAM2CX5Sn12UYAgZwvlXjxqwM036mk+pwSKO/vRp61E/SDSSXV9cScZ8G0CLSNDiHf+oNJvRG0EA14xnC5pZrJYKBpN5UeDiIKAc159skmNeBo7QdUDvYhUujWczlbfk7rmUh6rx7SDoVdScbrQ6g60X09n8klt7L9dD8Q26QvRBMiQPPIIHZ8LmIyUlDbEROg6HTa/ztHc3rYCEWAM1osiQKkRlJ4LNABfIyRSXXUNdm8TcFYCu+y2TpJH3MOOoEaDjRO3547Q22z1kV22dsMkrmGVN9McmOZBx3x73J63DHUW0h1b+/kcTvaPUbDEwOEMTLLzYhwiMZs4O/1vILs95xcz096hga8F8U/AAAA//+sruKUAAAABklEQVQDAJUhb7eyEwdoAAAAAElFTkSuQmCC">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230B1017%22/%3E%3Cpath d=%22M13 16v26M31 26v25%22 stroke=%22%23F2566D%22 stroke-width=%223%22 stroke-linecap=%22round%22/%3E%3Crect x=%228%22 y=%2220%22 width=%2210%22 height=%2217%22 rx=%222%22 fill=%22%23F2566D%22/%3E%3Crect x=%2226%22 y=%2230%22 width=%2210%22 height=%2216%22 rx=%222%22 fill=%22%23F2566D%22/%3E%3Cpath d=%22M6 12C21 16 35 22 58 27%22 fill=%22none%22 stroke=%22%23F0B90B%22 stroke-width=%224%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M50 8v47%22 stroke=%22%232CC088%22 stroke-width=%223%22 stroke-linecap=%22round%22/%3E%3Crect x=%2244%22 y=%2213%22 width=%2212%22 height=%2237%22 rx=%222%22 fill=%22%232CC088%22/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<meta name="theme-color" content="#F2F4F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B1017" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -55,7 +61,8 @@ button, input, select { font: inherit; color: inherit; }
 @media (min-width: 900px) { .wrap { padding-inline: 28px; } }
 
 .top { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 32px; }
-.brand { display: grid; gap: 2px; }
+.brand { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2px 12px; }
+.brand .logo { grid-row: span 2; width: 46px; height: 46px; display: block; border-radius: 10px; box-shadow: 0 0 0 1px var(--line); }
 .brand h1 { margin: 0; font: 700 30px/1.05 var(--font-display); letter-spacing: 0.01em; text-wrap: balance; }
 .cond { margin: 0; font: 500 13.5px/1.3 var(--font-mono); color: var(--muted); }
 .meta { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0; }
@@ -106,6 +113,12 @@ input[type="search"] { width: 13rem; max-width: 100%; }
 .sym small { font-size: 0.72em; color: var(--muted); font-weight: 600; margin-left: 1px; }
 .badge { font: 500 10.5px/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 3px 5px; white-space: nowrap; }
 .card-head .icon-btn { margin-left: auto; width: 30px; height: 30px; flex: none; }
+.card-head .icon-btn ~ .icon-btn { margin-left: 0; }
+/* Estrella: fija la moneda; en Seguimiento sale la primera de su día. */
+.icon-btn.star { color: var(--muted); }
+.icon-btn.star svg { width: 17px; height: 17px; }
+.icon-btn.star[aria-pressed="true"] { color: var(--ma-fast); }
+.icon-btn.star[aria-pressed="true"] svg { fill: currentColor; }
 .figures { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .price { font: 500 16px/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
 .chg { font: 500 13px/1.2 var(--font-mono); }
@@ -181,6 +194,10 @@ body.tracking .scan-only { display: none !important; }
 .coins .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .coins .coin { font: 600 15px var(--font-display); letter-spacing: 0.01em; }
 .coins .coin small { font-size: 0.78em; color: var(--muted); margin-right: 8px; }
+.coins .star { width: 28px; height: 28px; margin: -4px 6px -4px -6px; vertical-align: middle; border-color: transparent; background: transparent; }
+.coins .star:hover { border-color: var(--line); }
+.coins tr.starred td:first-child { box-shadow: inset 3px 0 0 var(--ma-fast); }
+.day-stats .stars b { color: var(--ma-fast); }
 .coins .muted { color: var(--muted); font-size: 13px; }
 .chgbar { display: inline-block; position: relative; width: 52px; height: 6px; margin-left: 10px; vertical-align: middle; background: var(--grid); border-radius: 3px; overflow: hidden; }
 .chgbar i { position: absolute; top: 0; bottom: 0; left: 0; background: currentColor; border-radius: 3px; }
@@ -188,10 +205,15 @@ body.tracking .scan-only { display: none !important; }
 /* En el móvil cada moneda ocupa tres líneas: moneda y variación; precio entonces y ahora; mínimo y máximo. */
 @media (max-width: 640px) {
   .coins thead, .coins .col-scan, .chgbar { display: none; }
-  .coins tbody tr { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "coin pct" "then now" "min max"; gap: 2px 12px; padding: 9px 12px; border-bottom: 1px solid var(--grid); }
+  .coins tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "coin pct" "then now" "min max"; gap: 2px 12px; padding: 9px 12px; border-bottom: 1px solid var(--grid); }
   .coins tbody tr:last-child { border-bottom: 0; }
+  .coins tr.starred { box-shadow: inset 3px 0 0 var(--ma-fast); }
+  .coins tr.starred td:first-child { box-shadow: none; }
+  .coins .star { margin: -6px 2px -6px -4px; }
   .coins td { padding: 0; border: 0; }
-  .coins .c-coin { grid-area: coin; }
+  .coins .c-coin { grid-area: coin; overflow: hidden; text-overflow: ellipsis; }
+  .coins .coin small { display: none; }  /* «/USDT»: en el móvil no cabe junto a la estrella y el mercado */
+  .coins .c-coin .badge { margin-left: 6px; }
   .coins .c-pct { grid-area: pct; font-weight: 500; }
   .coins .c-then { grid-area: then; text-align: left; font-size: 12.5px; }
   .coins .c-now { grid-area: now; font-size: 12.5px; }
@@ -234,6 +256,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
 <div class="wrap">
   <header class="top">
     <div class="brand">
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0B1017"/><path d="M13 16v26M31 26v25" stroke="#F2566D" stroke-width="3" stroke-linecap="round"/><rect x="8" y="20" width="10" height="17" rx="2" fill="#F2566D"/><rect x="26" y="30" width="10" height="16" rx="2" fill="#F2566D"/><path d="M6 12C21 16 35 22 58 27" fill="none" stroke="#F0B90B" stroke-width="4" stroke-linecap="round"/><path d="M50 8v47" stroke="#2CC088" stroke-width="3" stroke-linecap="round"/><rect x="44" y="13" width="12" height="37" rx="2" fill="#2CC088"/></svg>
       <h1>Momento-A</h1>
       <p class="cond" id="cond"></p>
     </div>
@@ -427,7 +450,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   }
   const store = {
     get(k) { try { return localStorage.getItem("momento-a:" + k); } catch (e) { return null; } },
-    set(k, v) { try { localStorage.setItem("momento-a:" + k, v); } catch (e) { /* sin almacenamiento */ } },
+    set(k, v) { try { localStorage.setItem("momento-a:" + k, v); return true; } catch (e) { return false; } },  // false: sin espacio o sin almacenamiento
+    remove(k) { try { localStorage.removeItem("momento-a:" + k); } catch (e) { /* sin almacenamiento */ } },
   };
   function decimals(v) {
     if (!v) return 2;
@@ -565,12 +589,14 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     for (const [key, m] of Object.entries(data.mercados)) {
       for (const it of m.coincidencias || []) {
         const item = Object.assign({ mercado: key }, it);
-        // Los filtros se evalúan siempre con las velas del momento del escaneo; los gráficos pueden
-        // pedir velas nuevas a Binance (y sustituir item.velas) sin que cambie la lista.
+        // Los filtros se evalúan siempre con las velas y el precio del momento del escaneo; los gráficos
+        // pueden pedir velas nuevas a Binance (y sustituir item.velas y item.precio) sin que cambie la lista.
         item._scan = item.velas;
+        item._precio = item.precio;
         if (fresh) {
+          // fresco: el escaneo descargó ya el gráfico completo en su temporalidad (las demás se piden al verse).
           item._fresh = {};
-          for (const tf of [data.intervalo, ...Object.keys(item.graficos || {})]) item._fresh[tf] = now;
+          for (const tf of [...(item.fresco === false ? [] : [data.intervalo]), ...Object.keys(item.graficos || {})]) item._fresh[tf] = now;
         }
         state.items.push(item);
       }
@@ -738,10 +764,44 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     return row;
   }
   const ICON_EXPAND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>';
-  function card(it, index) {
+  const ICON_STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.3 2.7 5.5 6 .9-4.35 4.2 1 6L12 17l-5.35 2.9 1-6L3.3 9.7l6-.9z"/></svg>';
+  function paintStar(b, on, label) {
+    b.setAttribute("aria-pressed", String(on));
+    b.title = on ? "Quitar la estrella" : "Poner estrella: la moneda queda fijada y sale la primera en Seguimiento";
+    b.setAttribute("aria-label", (on ? "Quitar la estrella a " : "Poner estrella a ") + label);
+  }
+  function starButton(on, label, onToggle) {
+    const b = h("button", { class: "icon-btn star", type: "button" });
+    b.innerHTML = ICON_STAR;
+    paintStar(b, on, label);
+    b.addEventListener("click", (e) => { e.stopPropagation(); onToggle(b); });
+    b.addEventListener("keydown", (e) => e.stopPropagation());  // Intro y espacio no abren el gráfico
+    return b;
+  }
+  // Día de seguimiento de los resultados que se ven: el de la vela diaria en que se escanearon.
+  function scanDay() { return state.data && !state.data.ejemplo && state.data.generado ? candleDayOf(state.data.generado, null) : null; }
+  function trackedCoin(fecha, it) {
+    const day = allDays().find((d) => d.fecha === fecha);
+    return day ? day.monedas.find((c) => coinKey(c) === coinKey(it)) || null : null;
+  }
+  function starredKeys(fecha) {
+    const day = fecha ? allDays().find((d) => d.fecha === fecha) : null;
+    return new Set(day ? day.monedas.filter((c) => c.estrella).map(coinKey) : []);
+  }
+  function toggleScanStar(it, button) {
+    const fecha = scanDay();
+    if (!fecha) return;
+    const tracked = trackedCoin(fecha, it);
+    const on = !(tracked && tracked.estrella);
+    setStar(fecha, tracked || { mercado: it.mercado, simbolo: it.simbolo, base: it.base, quote: it.quote, precio: it._precio ?? it.precio,
+      hora: state.data.generado, intervalo: it.intervalo || state.data.intervalo }, on);
+    paintStar(button, on, it.simbolo);
+  }
+  function card(it, index, starred) {
     const [f, m, s] = state.data.medias || [7, 25, 99];
     const expand = h("button", { class: "icon-btn", type: "button", title: "Ampliar", "aria-label": "Ampliar " + it.simbolo });
     expand.innerHTML = ICON_EXPAND;
+    const star = scanDay() ? starButton(starred, it.simbolo, (b) => toggleScanStar(it, b)) : null;
     const chg = it.vela_pct;
     const mini = h("div", { class: "mini" });
     mini.dataset.index = String(index);
@@ -749,7 +809,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       h("div", { class: "card-head" },
         h("span", { class: "sym" }, it.base || it.simbolo, h("small", { text: it.quote ? "/" + it.quote : "" })),
         h("span", { class: "badge", text: MARKET_NAMES[it.mercado] || it.mercado }),
-        expand),
+        star, expand),
       h("div", { class: "figures" },
         h("span", { class: "price", text: fmtPrice(it.precio) }),
         h("span", { class: "chg " + (chg >= 0 ? "up" : "down"), text: fmtPct(chg) + " vela " + tfLabel(it.intervalo || state.data.intervalo) })),
@@ -784,8 +844,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     state.view = pool
       .filter((it) => !q || it.simbolo.toUpperCase().includes(q))
       .sort(SORTS[state.sort] || SORTS.fuerza);
+    const stars = starredKeys(scanDay());
     state.view.forEach((it, i) => {
-      const el = card(it, i);
+      const el = card(it, i, stars.has(coinKey(it)));
       grid.append(el);
       const mini = el.querySelector(".mini");
       if (observer) observer.observe(mini); else createMini(mini);
@@ -1098,52 +1159,115 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   const num = (v) => { const n = parseFloat(v); return isFinite(n) ? n : null; };
   const row = (k) => [Number(k[0]), +k[1], +k[2], +k[3], +k[4], +k[5]];
 
+  // Todo lo que esta página pide a Binance (escaneo, gráficos y seguimiento) comparte, por mercado, el peso
+  // por minuto que permite Binance y las pausas que pida: así nada gasta el límite a espaldas del escaneo.
+  // Cada petición tiene un tiempo máximo y se reintenta: una respuesta que no llega ya no deja el escaneo parado.
+  const limits = {}, workingBase = {};
+  const NEVER = new AbortController().signal;
+  const STALL_MS = 15000;  // tiempo máximo de una petición (el doble para las listas grandes)
   class BinanceApi {
-    constructor(cfg, signal) { this.cfg = cfg; this.signal = signal; this.base = null; this.minute = 0; this.used = 0; this.budget = cfg.limit * 0.8; }
+    // opts.background: espera mientras haya un escaneo en marcha. opts.onWait(ms): avisa de una espera larga.
+    constructor(key, signal, opts) {
+      this.key = key;
+      this.cfg = API[key];
+      this.signal = signal || NEVER;
+      this.background = !!(opts && opts.background);
+      this.onWait = opts && opts.onWait;
+      this.lim = limits[key] || (limits[key] = { minute: 0, used: 0, budget: this.cfg.limit * 0.8, pausedUntil: 0, failures: 0 });
+    }
+    checkStop() { if (this.signal.aborted) throw new ScanError("Escaneo detenido.", true); }
     async reserve(weight) {  // reparte el peso por minuto que permite Binance
+      const lim = this.lim;
       for (;;) {
-        const now = Date.now(), minute = Math.floor(now / 60000);
-        if (minute !== this.minute) { this.minute = minute; this.used = 0; }
-        if (this.used + weight <= this.budget || this.used === 0) { this.used += weight; return; }
-        await sleep((minute + 1) * 60000 - now + 250);
+        this.checkStop();
+        const now = Date.now();
+        let wait = 0;
+        if (this.background && scanController) wait = 1000;  // el escaneo va primero
+        else if (lim.pausedUntil > now) wait = lim.pausedUntil - now;
+        else {
+          const minute = Math.floor(now / 60000);
+          if (minute !== lim.minute) { lim.minute = minute; lim.used = 0; }
+          if (lim.used + weight <= lim.budget || lim.used === 0) { lim.used += weight; return; }
+          wait = (minute + 1) * 60000 - now + 250;
+        }
+        if (wait > 2000 && this.onWait) this.onWait(wait);
+        await sleep(Math.min(wait, 1000));  // a trozos, para poder detener y para ir contando
       }
     }
-    async get(path, params, weight) {
+    // Una petición con tiempo máximo, que cubre también la lectura de la respuesta.
+    async request(url, timeout) {
+      const ctrl = new AbortController(), stop = () => ctrl.abort();
+      this.signal.addEventListener("abort", stop);
+      const timer = setTimeout(stop, timeout);
+      try {
+        const resp = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
+        // Peso que Binance lleva contado (si deja leerlo): incluye lo que gasten otras pestañas.
+        const used = parseInt(resp.headers.get("x-mbx-used-weight-1m"), 10);
+        if (used > 0 && Math.floor(Date.now() / 60000) === this.lim.minute) this.lim.used = Math.max(this.lim.used, used);
+        return { ok: resp.ok, status: resp.status, retryAfter: parseInt(resp.headers.get("retry-after"), 10), body: resp.ok ? await resp.json() : null };
+      } finally {
+        clearTimeout(timer);
+        this.signal.removeEventListener("abort", stop);
+      }
+    }
+    async get(path, params, weight, timeout = STALL_MS) {
       const qs = params ? "?" + new URLSearchParams(params) : "";
-      const bases = this.base ? [this.base] : this.cfg.bases;
+      const known = workingBase[this.key];
+      const bases = known ? [known, ...this.cfg.bases.filter((b) => b !== known)] : this.cfg.bases;
       let lastError = null;
       for (const base of bases) {
-        for (let attempt = 0; attempt < 4; attempt++) {
-          if (this.signal.aborted) throw new ScanError("Escaneo detenido.", true);
+        // Una dirección que ya respondió se reintenta; mientras se busca una que responda, se pasa enseguida a la siguiente.
+        const attempts = base === known ? 3 : base === bases[bases.length - 1] ? 2 : 1;
+        for (let attempt = 0; attempt < attempts; attempt++) {
           await this.reserve(weight);
-          let resp;
+          let res;
           try {
-            resp = await fetch(base + path + qs, { signal: this.signal, cache: "no-store" });
+            res = await this.request(base + path + qs, timeout);
           } catch (err) {
-            if (this.signal.aborted) throw new ScanError("Escaneo detenido.", true);
-            lastError = new ScanError("El navegador no pudo conectar con " + hostOf(base) +
-              " (sin conexión, bloqueo del navegador o página abierta dentro de Claude, que no permite conexiones externas).", true);
-            if (!this.base) break;  // todavía probando direcciones: pasa a la siguiente
-            await sleep(1000 * 2 ** attempt);
+            this.checkStop();
+            lastError = new ScanError(err && err.name === "AbortError" ? hostOf(base) + " no respondió a tiempo." : "Se cortó la conexión con " + hostOf(base) + ".");
+            if (attempt + 1 < attempts) await sleep(1000 * 2 ** attempt);
             continue;
           }
-          if (resp.ok) { this.base = base; return resp.json(); }
-          if (resp.status === 429) { lastError = new ScanError("Binance pidió esperar (429)."); await sleep(60000); continue; }
-          if (resp.status === 418) throw new ScanError("Binance ha bloqueado temporalmente tu IP por exceso de peticiones (418). Espera unos minutos.", true);
-          if (resp.status === 451 || resp.status === 403) {
-            lastError = new ScanError("Binance rechaza las peticiones desde tu ubicación (" + resp.status + ") en " + hostOf(base) + ".", true);
+          if (res.ok) { workingBase[this.key] = base; this.lim.failures = 0; return res.body; }
+          if (res.status === 429) {  // Binance pide esperar: se pausa todo lo de ese mercado, no solo esta petición
+            this.lim.pausedUntil = Math.max(this.lim.pausedUntil, Date.now() + (res.retryAfter > 0 ? res.retryAfter * 1000 : 30000));
+            lastError = new ScanError("Binance pidió esperar (429).");
+            continue;
+          }
+          if (res.status === 418) throw new ScanError("Binance ha bloqueado temporalmente tu IP por exceso de peticiones (418). Espera unos minutos.", true);
+          if (res.status === 451 || res.status === 403) {
+            lastError = new ScanError("Binance rechaza las peticiones desde tu ubicación (" + res.status + ") en " + hostOf(base) + ".", true);
             break;
           }
-          if (resp.status >= 500) { lastError = new ScanError("Error " + resp.status + " de Binance."); await sleep(1000 * 2 ** attempt); continue; }
-          throw new ScanError("Error " + resp.status + " en " + path + ".");
+          if (res.status >= 500) {
+            lastError = new ScanError("Error " + res.status + " de Binance.");
+            if (attempt + 1 < attempts) await sleep(1000 * 2 ** attempt);
+            continue;
+          }
+          throw new ScanError("Error " + res.status + " en " + path + ".");
         }
       }
-      throw lastError || new ScanError("Binance no respondió.", true);
+      if (lastError && lastError.fatal) throw lastError;
+      if (!workingBase[this.key]) {
+        throw new ScanError("El navegador no pudo conectar con " + bases.map(hostOf).join(" ni con ") +
+          " (sin conexión, bloqueo del navegador o página abierta dentro de Claude, que no permite conexiones externas).", true);
+      }
+      // Muchas peticiones seguidas sin respuesta: se ha caído la conexión y es mejor parar que seguir esperando.
+      if (++this.lim.failures >= 12) {
+        this.lim.failures = 0;
+        throw new ScanError("Binance dejó de responder (" + (lastError ? lastError.message : "sin respuesta") + ") Revisa tu conexión y vuelve a escanear.", true);
+      }
+      throw lastError || new ScanError("Binance no respondió.");
     }
   }
   // ---------- velas en vivo para los gráficos ----------
   const liveApis = {}, liveDown = {}, pendingCandles = new Map();
-  const NEVER = new AbortController().signal;
+  // background: lo que puede esperar a que acabe un escaneo (mínimos y máximos del seguimiento).
+  function apiFor(market, background) {
+    const k = market + (background ? ":fondo" : "");
+    return liveApis[k] || (liveApis[k] = new BinanceApi(market, NEVER, { background }));
+  }
   function isFresh(it, tf) { return !!rowsFor(it, tf) && !!it._fresh && it._fresh[tf] >= state.freshSince; }
   // Descarga las velas de una moneda en esa temporalidad. Si no se puede (sin conexión, dentro de
   // Claude, datos de ejemplo), el gráfico usa las velas que ya traía el informe.
@@ -1154,8 +1278,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     }
     const key = it.mercado + ":" + it.simbolo + ":" + tf;
     if (!pendingCandles.has(key)) {
-      const api = liveApis[it.mercado] || (liveApis[it.mercado] = new BinanceApi(cfg, NEVER));
-      pendingCandles.set(key, api.get(cfg.klines, { symbol: it.simbolo, interval: tf, limit: CHART_LIMIT }, cfg.klinesW(CHART_LIMIT))
+      pendingCandles.set(key, apiFor(it.mercado).get(cfg.klines, { symbol: it.simbolo, interval: tf, limit: CHART_LIMIT }, cfg.klinesW(CHART_LIMIT))
         .then((rows) => {
           const data = rows.map(row);
           if (!data.length) return false;
@@ -1204,95 +1327,121 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     return f[i] < m[i] || f[i - 1] < m[i - 1];
   }
   const isStockTags = (tags) => (tags || []).some((t) => typeof t === "string" && t.toLowerCase().includes("stock"));
+  // Lista de acciones tokenizadas (bStocks), una vez por hora como mucho: 1) la copia publicada junto a la web
+  // (bstocks.json, el workflow Web la renueva cada día); 2) la lista de productos de Binance, que su web no
+  // suele dejar consultar desde otras páginas.
+  let stockList = null;
   async function loadStockList() {
-    // 1) lista de productos de Binance; 2) copia publicada junto a la web (bstocks.json)
-    try {
-      const resp = await fetch(PRODUCTS_URL, { cache: "no-store" });
-      if (resp.ok) {
-        const set = new Set(((await resp.json()).data || []).filter((p) => p && isStockTags(p.tags)).map((p) => p.s));
-        if (set.size) return set;
+    if (stockList && Date.now() - stockList.at < 3600e3) return stockList.set;
+    const getJSON = async (url) => {
+      const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const resp = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+        return resp.ok ? await resp.json() : null;
+      } catch (err) {
+        return null;
+      } finally {
+        clearTimeout(timer);
       }
-    } catch (err) { /* la web de Binance no permite consultarla desde otras páginas */ }
-    try {
-      const resp = await fetch("bstocks.json", { cache: "no-store" });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (Array.isArray(data.simbolos) && data.simbolos.length) return new Set(data.simbolos);
-      }
-    } catch (err) { /* sin copia local */ }
-    return null;
-  }
-  async function scanMarket(key, opts, report, signal) {
-    const cfg = API[key];
-    const api = new BinanceApi(cfg, signal);
-    const notes = [];
-    report(cfg.nombre + ": preparando…");
-    const info = await api.get(cfg.info, null, cfg.infoW);
-    for (const r of info.rateLimits || []) {
-      if (r.rateLimitType === "REQUEST_WEIGHT" && r.interval === "MINUTE" && r.intervalNum === 1) api.budget = r.limit * 0.8;
+    };
+    let set = null;
+    const copy = await getJSON("bstocks.json");
+    if (copy && Array.isArray(copy.simbolos) && copy.simbolos.length) set = new Set(copy.simbolos);
+    if (!set) {
+      const products = await getJSON(PRODUCTS_URL);
+      const found = products && Array.isArray(products.data) ? products.data.filter((p) => p && isStockTags(p.tags)).map((p) => p.s) : [];
+      if (found.length) set = new Set(found);
     }
-    let symbols = (info.symbols || []).filter((s) => s.status === "TRADING" && s.quoteAsset === opts.quote && !STABLES.has(s.baseAsset) &&
-      (key === "spot" ? s.isSpotTradingAllowed !== false : s.contractType === "PERPETUAL" && !NON_CRYPTO.has(s.underlyingType)));
+    if (set) stockList = { at: Date.now(), set };
+    return set;
+  }
+  // Pares de cada mercado, guardados 10 minutos: repetir un escaneo no vuelve a bajar la lista completa de Binance.
+  const pairCache = {};
+  async function marketPairs(key, api, quote) {
+    const cfg = API[key], cached = pairCache[key];
+    if (cached && cached.quote === quote && Date.now() - cached.at < 600e3) return cached;
+    const info = await api.get(cfg.info, null, cfg.infoW, 2 * STALL_MS);
+    for (const r of info.rateLimits || []) {
+      if (r.rateLimitType === "REQUEST_WEIGHT" && r.interval === "MINUTE" && r.intervalNum === 1) api.lim.budget = r.limit * 0.8;
+    }
+    let symbols = (info.symbols || []).filter((s) => s.status === "TRADING" && s.quoteAsset === quote && !STABLES.has(s.baseAsset) &&
+      (key === "spot" ? s.isSpotTradingAllowed !== false : s.contractType === "PERPETUAL" && !NON_CRYPTO.has(s.underlyingType)))
+      .map((s) => ({ symbol: s.symbol, baseAsset: s.baseAsset, quoteAsset: s.quoteAsset }));
+    let stocksUnknown = false;
     if (key === "spot") {
       const stocks = await loadStockList();
       if (stocks) symbols = symbols.filter((s) => !stocks.has(s.symbol));
-      else notes.push("no se pudo saber qué pares son acciones tokenizadas (bStocks), así que pueden aparecer");
+      else stocksUnknown = true;
     }
-    const tickers = new Map((await api.get(cfg.ticker, null, cfg.tickerW)).map((t) => [t.symbol, t]));
-    const candidates = symbols.map((s) => {
+    return (pairCache[key] = { at: Date.now(), quote, symbols, stocksUnknown });
+  }
+  async function scanMarket(key, opts, report, signal) {
+    const cfg = API[key];
+    const api = new BinanceApi(key, signal, {
+      onWait: (ms) => report(cfg.nombre + ": esperando " + Math.ceil(ms / 1000) + " s por el límite de peticiones de Binance…"),
+    });
+    const notes = [];
+    report(cfg.nombre + ": preparando…");
+    const pairs = await marketPairs(key, api, opts.quote);
+    if (pairs.stocksUnknown) notes.push("no se pudo saber qué pares son acciones tokenizadas (bStocks), así que pueden aparecer");
+    const tickers = new Map((await api.get(cfg.ticker, null, cfg.tickerW, 2 * STALL_MS)).map((t) => [t.symbol, t]));
+    const candidates = pairs.symbols.map((s) => {
       const t = tickers.get(s.symbol) || {};
       return { info: s, volume: num(t.quoteVolume), change: num(t.priceChangePercent) };
     });
 
-    const found = [];
+    // 1) Velas de cada par para las medias. Los que no responden se reintentan al final, más despacio.
+    const found = [], retry = [];
     let analyzed = 0, done = 0, failed = 0;
-    await runPool(candidates, 8, async (c) => {
+    async function scanPair(c, last) {
       try {
         const rows = (await api.get(cfg.klines, { symbol: c.info.symbol, interval: opts.interval, limit: SCAN_LIMIT }, cfg.klinesW(SCAN_LIMIT))).map(row);
         if (rows.length >= SCAN_PERIODS[2]) {
           analyzed++;
-          if (bearish(rows)) found.push({ c, rows, charts: {} });
+          if (bearish(rows)) found.push({ c, rows, chart: null });
         }
       } catch (err) {
         if (err.fatal) throw err;
-        failed++;
-      } finally {
-        report(cfg.nombre + ": " + (++done) + "/" + candidates.length + " pares");
+        if (last) failed++; else retry.push(c);
       }
+    }
+    await runPool(candidates, 8, async (c) => {
+      await scanPair(c, false);
+      report(cfg.nombre + ": " + (++done) + "/" + candidates.length + " pares");
     });
-    if (failed) notes.push(failed + " pares no respondieron");
+    let retried = 0;
+    await runPool(retry, 2, async (c) => {
+      await scanPair(c, true);
+      report(cfg.nombre + ": reintentando " + (++retried) + "/" + retry.length + " pares que no respondieron");
+    });
+    if (failed) notes.push(failed + (failed === 1 ? " par no respondió" : " pares no respondieron"));
 
-    // Gráficos en todas las temporalidades para las que cumplen los filtros ahora; las demás se piden si se muestran.
+    // 2) Gráfico completo en la temporalidad del escaneo para las que cumplen los filtros ahora. Las demás
+    // temporalidades (y las monedas que entren al cambiar los filtros) se piden al mostrarse cada tarjeta.
     const crit = criteria(), now = Date.now();
     const matches = found.filter((m) => evaluateItem({ velas: m.rows, intervalo: opts.interval, volumen_24h: m.c.volume }, crit, now));
-    const tfs = [...new Set([...CHART_TFS, opts.interval])];
-    const jobs = matches.flatMap((m) => tfs.map((tf) => [m, tf]));
     let charted = 0;
     try {
-      await runPool(jobs, 8, async ([m, tf]) => {
+      await runPool(matches, 6, async (m) => {
         try {
-          const rows = await api.get(cfg.klines, { symbol: m.c.info.symbol, interval: tf, limit: CHART_LIMIT }, cfg.klinesW(CHART_LIMIT));
-          if (rows.length) m.charts[tf] = rows.map(row);
+          const rows = await api.get(cfg.klines, { symbol: m.c.info.symbol, interval: opts.interval, limit: CHART_LIMIT }, cfg.klinesW(CHART_LIMIT));
+          if (rows.length) m.chart = rows.map(row);
         } catch (err) {
           if (err.fatal) throw err;
         } finally {
-          report(cfg.nombre + ": gráficos " + (++charted) + "/" + jobs.length);
+          report(cfg.nombre + ": gráficos " + (++charted) + "/" + matches.length);
         }
       });
     } catch (err) {
       if (signal.aborted) throw err;
-      notes.push("faltan gráficos en otras temporalidades (" + err.message + ")");
+      notes.push("faltan gráficos (" + err.message + "); se piden al verlos");
     }
 
-    const coincidencias = found.map(({ c, rows, charts }) => {
-      const graficos = {};
-      for (const [tf, data] of Object.entries(charts)) if (tf !== opts.interval) graficos[tf] = data;
-      return {
-        mercado: key, intervalo: opts.interval, simbolo: c.info.symbol, base: c.info.baseAsset, quote: c.info.quoteAsset,
-        precio: rows[rows.length - 1][4], var_24h_pct: c.change, volumen_24h: c.volume,
-        velas: charts[opts.interval] || rows, graficos,
-      };
-    });
+    const coincidencias = found.map(({ c, rows, chart }) => ({
+      mercado: key, intervalo: opts.interval, simbolo: c.info.symbol, base: c.info.baseAsset, quote: c.info.quoteAsset,
+      precio: rows[rows.length - 1][4], var_24h_pct: c.change, volumen_24h: c.volume,
+      velas: chart || rows, graficos: {}, fresco: !!chart,
+    }));
     return { market: { nombre: cfg.nombre, quote: opts.quote, analizadas: analyzed, coincidencias }, notes };
   }
   let scanController = null;
@@ -1335,7 +1484,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       }, true);
     }
     // Al seguimiento van las monedas que cumplen los filtros en el momento del escaneo.
-    const fecha = opts.track && Object.keys(mercados).length ? recordScan(passing(), opts.interval) : null;
+    const fecha = opts.track && Object.keys(mercados).length ? recordScan(passing(), opts.interval, state.data.generado) : null;
     if (fecha) {
       const saved = done + " Guardado en «Seguimiento " + dayTitle(fecha) + "»";
       status.textContent = saved + (ghConfig() ? "; subiendo a GitHub…" : " de este navegador.");
@@ -1385,9 +1534,27 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     try { const v = JSON.parse(store.get(key) || "null"); return v == null ? fallback : v; } catch (err) { return fallback; }
   }
   const localDays = () => readJSON("seguimiento", {});
-  const saveLocalDays = (days) => store.set("seguimiento", JSON.stringify(days));
+  // Este navegador guarda como mucho unos 2,5 MB de seguimiento (meses de escaneos): si no caben, se olvidan
+  // primero los días más antiguos que ya están en GitHub (se siguen viendo desde allí) y, si no basta, los más
+  // antiguos de todos (nunca el día `keep`). Sin espacio, también se olvidan los mínimos y máximos guardados,
+  // que se vuelven a calcular.
+  function saveLocalDays(days, keep) {
+    const order = Object.keys(days).filter((f) => f !== keep)
+      .sort((a, b) => (!!days[a].pendiente - !!days[b].pendiente) || (a < b ? -1 : 1));
+    while (order.length && JSON.stringify(days).length > 2500000) delete days[order.shift()];
+    for (;;) {
+      if (store.set("seguimiento", JSON.stringify(days))) return true;
+      if (store.get("seguimiento-extremos")) { store.remove("seguimiento-extremos"); continue; }
+      if (!order.length) return false;
+      delete days[order.shift()];
+    }
+  }
   const deletedDays = () => readJSON("seguimiento-borrados", {});
   const saveDeletedDays = (days) => store.set("seguimiento-borrados", JSON.stringify(days));
+  function undelete(fecha) {
+    const deleted = deletedDays();
+    if (deleted[fecha]) { delete deleted[fecha]; saveDeletedDays(deleted); }
+  }
   // El día del seguimiento es la vela diaria de Binance en curso: abre a las 00:00 UTC y se nombra con la
   // fecha en que abre en tu hora, como la muestra Binance con tu zona horaria. En Lima (UTC−5) la vela abre
   // a las 7:00 pm: de las 7:00 pm del 30 de septiembre a las 6:59 pm del 1 de octubre es «30 de septiembre».
@@ -1410,19 +1577,30 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   }
   const timeOf = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }); };
   const coinKey = (c) => c.mercado + ":" + c.simbolo;
+  // La estrella lleva la hora en que se puso o se quitó: al unir copias del mismo día (este navegador,
+  // GitHub, otro dispositivo) gana el último cambio, también cuando se quita.
+  const starTime = (c) => (c && c.estrella_hora ? Date.parse(c.estrella_hora) || 0 : 0);
   // Une dos versiones del mismo día: cada moneda una vez, con el primer precio en que apareció.
   function mergeDay(a, b) {
     const coins = new Map();
     for (const c of [...((a && a.monedas) || []), ...((b && b.monedas) || [])]) {
       if (!c || !c.simbolo || !c.mercado) continue;
       const prev = coins.get(coinKey(c));
-      if (!prev || String(c.hora) < String(prev.hora)) coins.set(coinKey(c), c);
+      if (!prev) { coins.set(coinKey(c), c); continue; }
+      const first = String(c.hora) < String(prev.hora) ? c : prev;
+      const mark = starTime(c) > starTime(prev) ? c : prev;
+      coins.set(coinKey(c), mark === first || !mark.estrella_hora ? first
+        : Object.assign({}, first, { estrella: !!mark.estrella, estrella_hora: mark.estrella_hora }));
     }
     return { fecha: (a || b).fecha, monedas: [...coins.values()] };
   }
+  function cleanCoin(c) {
+    const out = { mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c.precio, hora: c.hora, intervalo: c.intervalo };
+    if (c.estrella_hora) Object.assign(out, { estrella: !!c.estrella, estrella_hora: c.estrella_hora });
+    return out;
+  }
   function cleanDay(day) {
-    return { fecha: day.fecha, monedas: day.monedas.map((c) => ({ mercado: c.mercado, simbolo: c.simbolo, base: c.base,
-      quote: c.quote, precio: c.precio, hora: c.hora, intervalo: c.intervalo })) };
+    return { fecha: day.fecha, monedas: day.monedas.map(cleanCoin) };
   }
   function allDays() {
     const local = localDays(), deleted = deletedDays(), out = {};
@@ -1452,21 +1630,38 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     }
     if (moved) saveLocalDays(out);
   }
-  function recordScan(items, interval) {
-    const now = new Date(), fecha = todayKey(now), hora = now.toISOString();
-    const monedas = items.map((c) => ({ mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c.precio, hora, intervalo: interval }));
+  // hora: la del escaneo (ISO); el precio es el de ese momento, aunque los gráficos ya lo hayan actualizado.
+  function recordScan(items, interval, hora) {
+    const fecha = candleDayOf(hora, todayKey());
+    const monedas = items.map((c) => ({ mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c._precio ?? c.precio, hora, intervalo: interval }));
     if (!monedas.length) return null;
     const days = localDays();
     days[fecha] = Object.assign(mergeDay(days[fecha], { fecha, monedas }), { pendiente: true });
-    // Si el navegador se queda sin espacio, se olvidan primero los días más antiguos que ya están en GitHub
-    // y, si no basta, los más antiguos de todos (el de hoy nunca).
-    const order = Object.keys(days).filter((f) => f !== fecha).sort((a, b) => (days[a].pendiente - days[b].pendiente) || (a < b ? -1 : 1));
-    while (order.length && JSON.stringify(days).length > 2500000) delete days[order.shift()];
-    saveLocalDays(days);
-    const deleted = deletedDays();
-    if (deleted[fecha]) { delete deleted[fecha]; saveDeletedDays(deleted); }
+    saveLocalDays(days, fecha);
+    undelete(fecha);
     return fecha;
   }
+  // ---------- seguimiento: estrellas ----------
+  // Una moneda con estrella queda fijada: sale la primera en su día de seguimiento. Se guarda como el resto
+  // del seguimiento (este navegador y GitHub). Si la moneda no estaba en ese día (escaneo sin «Guardar en
+  // seguimiento»), se añade con su precio del escaneo.
+  function setStar(fecha, coin, on) {
+    const days = localDays();
+    const mark = Object.assign(cleanCoin(coin), { estrella: on, estrella_hora: new Date().toISOString() });
+    days[fecha] = Object.assign(mergeDay(days[fecha], { fecha, monedas: [mark] }), { pendiente: true });
+    saveLocalDays(days, fecha);
+    undelete(fecha);
+    scheduleSync();
+  }
+  // Las estrellas se suben a GitHub unos segundos después del último cambio (un solo guardado para varias).
+  let syncTimer = null;
+  function scheduleSync() {
+    clearTimeout(syncTimer);
+    syncTimer = ghConfig() ? setTimeout(() => { syncTimer = null; syncPending(); }, 4000) : null;
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && syncTimer) { clearTimeout(syncTimer); syncTimer = null; syncPending(); }
+  });
 
   // GitHub: la clave se guarda solo en este navegador y solo se envía a api.github.com.
   function ghConfig() { const c = readJSON("github", null); return c && c.token && c.owner && c.repo ? c : null; }
@@ -1505,8 +1700,12 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
         try { merged = mergeDay(JSON.parse(b64decode(current.content)), day); } catch (err) { /* archivo dañado: se reemplaza */ }
       }
       merged = cleanDay(merged);
-      const body = { message: "Seguimiento " + day.fecha + " (" + merged.monedas.length + " monedas)",
-        content: b64encode(JSON.stringify(merged, null, 1) + "\n"), branch: cfg.branch };
+      const text = JSON.stringify(merged, null, 1) + "\n";
+      // Si GitHub ya tiene exactamente esto (p. ej. al repetir un escaneo), no se crea un commit vacío.
+      try { if (current && current.content && b64decode(current.content) === text) return merged; } catch (err) { /* se reescribe */ }
+      const stars = merged.monedas.filter((c) => c.estrella).length;
+      const body = { message: "Seguimiento " + day.fecha + " (" + merged.monedas.length + " monedas" + (stars ? ", " + stars + " con estrella" : "") + ")",
+        content: b64encode(text), branch: cfg.branch };
       if (current) body.sha = current.sha;
       try {
         await gh(cfg, "PUT", path, body);
@@ -1521,24 +1720,27 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   function syncPending() {
     const cfg = ghConfig();
     if (!cfg) return Promise.resolve(false);
+    // Una subida a la vez: si ya hay una en marcha, esta empieza cuando acabe (para lo que haya cambiado mientras).
     if (syncing) return syncing.then(() => syncPending());
+    // Sin nada pendiente no se marca ninguna subida en marcha: antes quedaba marcada para siempre y la
+    // siguiente subida (la de después de un escaneo) se esperaba a sí misma sin fin y bloqueaba la página.
+    const pending = Object.values(localDays()).filter((d) => d.pendiente);
+    if (!pending.length) return Promise.resolve(true);
     syncing = (async () => {
-      const pending = Object.values(localDays()).filter((d) => d.pendiente);
-      if (!pending.length) return true;
       track.busy = true;
       track.sync = "Subiendo a GitHub…";
       track.syncError = "";
-      renderSync();
       try {
+        renderSync();
         for (const day of pending) {
           const merged = await pushDay(cfg, day);
           const days = localDays();
           const now = days[day.fecha];
           if (now) {
-            // Si mientras tanto se escaneó otra vez ese día, queda pendiente para la próxima subida.
-            const changed = now.monedas.length !== day.monedas.length;
+            // Si mientras tanto cambió ese día (otro escaneo, una estrella), queda pendiente para la próxima subida.
+            const changed = JSON.stringify(cleanDay(now)) !== JSON.stringify(cleanDay(day));
             days[day.fecha] = Object.assign(mergeDay(merged, now), { pendiente: changed });
-            saveLocalDays(days);
+            saveLocalDays(days, day.fecha);
           }
         }
         track.sync = "Subido a las " + timeOf(new Date().toISOString()) + ".";
@@ -1553,7 +1755,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
         if (!$("view-track").hidden) renderTracking();
       }
     })();
-    return syncing;
+    const run = syncing;
+    run.finally(() => { if (syncing === run) syncing = null; });  // por si acaso: nunca queda marcada al terminar
+    return run;
   }
   async function deleteDay(fecha) {
     const cfg = ghConfig();
@@ -1607,7 +1811,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const problems = [];
     await Promise.all(markets.map(async (m) => {
       try {
-        const api = liveApis[m] || (liveApis[m] = new BinanceApi(API[m], NEVER));
+        const api = apiFor(m);
         const rows = await api.get(API[m].price, null, API[m].priceW);
         track.prices[m] = new Map(rows.map((r) => [r.symbol, +r.price]));
       } catch (err) {
@@ -1638,7 +1842,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const key = extKey(fecha, c), prev = track.extremes[key];
     const from = prev && prev.hasta ? prev.hasta : start;
     let min = prev ? prev.min : c.precio, max = prev ? prev.max : c.precio;  // el precio del seguimiento también cuenta
-    const api = liveApis[c.mercado] || (liveApis[c.mercado] = new BinanceApi(cfg, NEVER));
+    const api = apiFor(c.mercado, true);  // espera si hay un escaneo en marcha
     const [tf, len] = pickTf(Date.now() - from);
     const rows = [];
     if (len > 60e3) {
@@ -1667,7 +1871,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       try { await updateExtremes(fecha, c); } catch (err) { /* moneda sin velas (p. ej. retirada): se deja como estaba */ }
       status.textContent = "Mínimos y máximos: " + (++done) + "/" + jobs.length;
     }).then(() => {
-      const keep = new Set(days.map((d) => d.fecha));  // se olvidan los de días borrados
+      // Se guardan los de los 60 días más recientes (los de días borrados o más antiguos se recalculan si hace falta).
+      const keep = new Set(days.slice(0, 60).map((d) => d.fecha));
       for (const k of Object.keys(track.extremes)) if (!keep.has(k.split("|")[0])) delete track.extremes[k];
       store.set("seguimiento-extremos", JSON.stringify(track.extremes));
       track.extremesAt = Date.now();
@@ -1749,26 +1954,33 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     if (value == null) return ["—"];
     return [fmtPrice(value), h("small", { class: pct > 0 ? "up" : pct < 0 ? "down" : "", text: fmtPct(pct) })];
   }
+  // Columnas: precio del seguimiento (el del escaneo), precio actual, y desde el escaneo: mínimo, máximo y variación.
   function coinTable(day, coins) {
     const table = h("table", { class: "coins" });
     table.append(h("thead", null, h("tr", null,
       h("th", { text: "Moneda" }),
-      h("th", { class: "r", text: "Precio " + shortDate(day.fecha) }),
+      h("th", { class: "r", text: "Precio " + shortDate(day.fecha), title: "Precio de seguimiento: el de la moneda en el escaneo" }),
       h("th", { class: "r", text: "Precio actual" }),
-      h("th", { class: "r", text: "Variación" }),
       h("th", { class: "r", text: "Mínimo", title: "Precio más bajo desde el escaneo" }),
       h("th", { class: "r", text: "Máximo", title: "Precio más alto desde el escaneo" }),
+      h("th", { class: "r", text: "Variación", title: "Precio actual frente al precio de seguimiento" }),
       h("th", { class: "col-scan", text: "Escaneo" }))));
     const body = h("tbody");
     coins.forEach((c, i) => {
-      const tr = h("tr", { tabindex: "0", title: "Ver el gráfico de " + c.simbolo },
-        h("td", { class: "c-coin" }, h("span", { class: "coin" }, c.base || c.simbolo, h("small", { text: c.quote ? "/" + c.quote : "" })),
+      const star = starButton(!!c.estrella, c.simbolo, () => {
+        setStar(day.fecha, c, !c.estrella);
+        renderTracking();
+        const again = $("track-days").querySelector('[data-day="' + day.fecha + '"] tr[data-key="' + coinKey(c) + '"] .star');
+        if (again) again.focus();
+      });
+      const tr = h("tr", { tabindex: "0", class: c.estrella ? "starred" : null, "data-key": coinKey(c), title: "Ver el gráfico de " + c.simbolo },
+        h("td", { class: "c-coin" }, star, h("span", { class: "coin" }, c.base || c.simbolo, h("small", { text: c.quote ? "/" + c.quote : "" })),
           h("span", { class: "badge", text: MARKET_NAMES[c.mercado] || c.mercado })),
         h("td", { class: "r num c-then", "data-label": shortDate(day.fecha), text: fmtPrice(c.precio) }),
         h("td", { class: "r num c-now", "data-label": "ahora", text: c.ahora == null ? "—" : fmtPrice(c.ahora) }),
-        h("td", { class: "r num c-pct " + (c.pct == null ? "" : c.pct >= 0 ? "up" : "down") }, c.pct == null ? "—" : fmtPct(c.pct), changeBar(c.pct)),
         h("td", { class: "r num c-min", "data-label": "mín" }, ...extremeCell(c.min, c.minPct)),
         h("td", { class: "r num c-max", "data-label": "máx" }, ...extremeCell(c.max, c.maxPct)),
+        h("td", { class: "r num c-pct " + (c.pct == null ? "" : c.pct >= 0 ? "up" : "down") }, c.pct == null ? "—" : fmtPct(c.pct), changeBar(c.pct)),
         h("td", { class: "col-scan muted", text: timeOf(c.hora) + (c.intervalo ? " · velas " + tfLabel(c.intervalo) : "") }));
       const open = () => openTrackedChart(day, coins, i);
       tr.addEventListener("click", open);
@@ -1779,21 +1991,25 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     return h("div", { class: "day-body" }, table);
   }
   function dayCard(day, index) {
-    const coins = withPrices(day).sort(TRACK_SORTS[track.sort] || TRACK_SORTS.subida);
+    // Las monedas con estrella van primero; dentro de cada grupo, el orden elegido.
+    const sort = TRACK_SORTS[track.sort] || TRACK_SORTS.subida;
+    const coins = withPrices(day).sort((a, b) => (b.estrella ? 1 : 0) - (a.estrella ? 1 : 0) || sort(a, b));
     const open = isOpen(day.fecha, index);
     const s = summarize(coins);
+    const starred = coins.filter((c) => c.estrella).length;
     const toggle = h("button", { class: "day-toggle", type: "button", "aria-expanded": String(open) });
     toggle.innerHTML = ICON_CHEVRON;
     toggle.append(h("h2", { text: "Seguimiento " + dayTitle(day.fecha) }));
     toggle.addEventListener("click", () => toggleDay(day.fecha, index));
     const stats = h("div", { class: "day-stats" },
       h("span", null, h("b", { text: String(coins.length) }), coins.length === 1 ? " moneda" : " monedas"),
+      starred ? h("span", { class: "stars" }, h("b", { text: "★ " + starred }), " con estrella") : null,
       s.n ? h("span", null, "Media ", h("b", { class: s.avg >= 0 ? "up" : "down", text: fmtPct(s.avg) })) : null,
       s.n ? h("span", null, h("b", { class: "up", text: "▲ " + s.up }), " suben · ", h("b", { class: "down", text: "▼ " + s.down }), " bajan") : null,
       s.n > 1 ? h("span", null, "Mejor ", h("b", { text: (s.best.base || s.best.simbolo) + " " + fmtPct(s.best.pct) })) : null,
       s.n > 1 ? h("span", null, "Peor ", h("b", { text: (s.worst.base || s.worst.simbolo) + " " + fmtPct(s.worst.pct) })) : null,
       h("span", { text: daysAgo(day.fecha) }));
-    const card = h("article", { class: "day" },
+    const card = h("article", { class: "day", "data-day": day.fecha },
       h("header", { class: "day-head" }, toggle, stats, h("div", { class: "day-actions" }, deleteControl(day.fecha))));
     if (open) card.append(coins.length ? coinTable(day, coins) : h("p", { class: "gh-note", style: "padding: 0 14px 12px", text: "Ninguna moneda con este filtro." }));
     return card;

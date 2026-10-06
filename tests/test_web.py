@@ -21,6 +21,19 @@ def test_collect_tracking_merges_days_newest_first(tmp_path):
     assert days[0]["monedas"] == [{k: v for k, v in coin.items() if k != "extra"}]
 
 
+def test_collect_tracking_keeps_stars(tmp_path):
+    base = {"mercado": "futures", "base": "AAA", "quote": "USDT", "precio": 2.0, "hora": "2026-10-06T18:15:34.833Z", "intervalo": "1d"}
+    starred = dict(base, simbolo="AAAUSDT", estrella=True, estrella_hora="2026-10-06T18:20:00.000Z")
+    unstarred = dict(base, simbolo="BBBUSDT", estrella=False, estrella_hora="2026-10-06T18:21:00.000Z")
+    plain = dict(base, simbolo="CCCUSDT", estrella=True)  # sin hora de la marca: no cuenta
+    write(tmp_path / "2026-10-05.json", {"fecha": "2026-10-05", "monedas": [starred, unstarred, plain]})
+
+    (day,) = collect_tracking(tmp_path)
+    assert day["monedas"][0] == starred
+    assert day["monedas"][1] == unstarred  # quitar la estrella también se conserva
+    assert "estrella" not in day["monedas"][2] and "estrella_hora" not in day["monedas"][2]
+
+
 def test_main_writes_app_and_tracking(tmp_path, capsys):
     folder = tmp_path / "seguimiento"
     folder.mkdir()

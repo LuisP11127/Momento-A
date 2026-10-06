@@ -38,6 +38,11 @@ con sus gráficos. Las peticiones a Binance salen **desde tu navegador y tu cone
 no hace falta ningún servidor ni que Binance acepte las IP de GitHub.
 
 - **Escanear:** mercado (spot y futuros, solo spot o solo futuros) y velas (1D por defecto).
+  Cada petición a Binance tiene un tiempo máximo y se reintenta si no responde o da error; las
+  que siguen fallando se reintentan al final, y el aviso dice cuántos pares no respondieron. Todo
+  lo que la página pide a Binance comparte el límite de peticiones por minuto, y si hay que
+  esperar, la barra lo dice con los segundos que faltan. El escaneo solo baja el gráfico
+  completo de la temporalidad escaneada; las demás se piden al ver cada tarjeta.
 - **Filtros:** margen bajo la MA7, máximo sobre la MA7, volumen mínimo en 24 h, no exigir
   MA25 < MA99, incluir velas rojas y vela cerrada (los criterios de la tabla de arriba). La
   lista **se actualiza al momento mientras escribes**, sin volver a escanear: el escaneo
@@ -47,6 +52,9 @@ no hace falta ningún servidor ni que Binance acepte las IP de GitHub.
   Binance (MA(7) amarillo, MA(25) rosa, MA(99) morado), la variación de la vela, cuánto está
   sobre la MA(7), cuánto le falta a la MA(7) para cruzar la MA(25), las velas seguidas sobre
   la MA(7) y el volumen.
+- **Estrella** (☆ junto a ampliar): fija la moneda. En **Seguimiento** sale la primera de su día;
+  si la moneda no se había guardado (escaneo sin **Guardar en seguimiento**), se añade con su
+  precio del escaneo. Se guarda como el resto del seguimiento (navegador y GitHub).
 - **Cumple en** marca en qué temporalidades (2h, 4h, 8h, 12h y 1D) se cumple también la
   condición.
 - Filtros **Todos / Spot / Futuros / No repetidas** (cada moneda una vez; si está en los dos
@@ -88,12 +96,24 @@ Los gráficos y las horas se muestran en tu zona horaria, como en Binance.
 
 En la pestaña **Seguimiento**:
 
-- un apartado por día (el más reciente abierto) con el precio de entonces (fijo), el precio
-  actual, la variación y el **mínimo** y el **máximo** desde la hora del escaneo (con su % frente
-  al precio de entonces), y un resumen: media, cuántas suben y bajan, la mejor y la peor. Los
-  precios se piden a Binance desde tu navegador y se actualizan cada minuto; el mínimo y el
-  máximo salen de las velas de Binance desde la hora exacta del escaneo y se recalculan cada
-  5 minutos y con **Actualizar precios** (solo se piden las velas nuevas);
+- un apartado por día (el más reciente abierto) con estas columnas:
+
+  | Columna | Qué es |
+  |---|---|
+  | **Moneda** | con su estrella y su mercado |
+  | **Precio 5 oct** | el precio de seguimiento: el de la moneda al escanear (fijo); el título lleva la fecha del día |
+  | **Precio actual** | el de Binance ahora, actualizado cada minuto |
+  | **Mínimo** | el precio más bajo **desde el escaneo**, con su % frente al precio de seguimiento |
+  | **Máximo** | el precio más alto **desde el escaneo**, con su % frente al precio de seguimiento |
+  | **Variación** | precio actual frente al precio de seguimiento |
+  | **Escaneo** | hora del escaneo y temporalidad |
+
+  y un resumen: media, cuántas suben y bajan, la mejor, la peor y cuántas tienen estrella. El
+  mínimo y el máximo salen de las velas de Binance desde el minuto del escaneo (el precio de
+  seguimiento también cuenta) y se recalculan cada 5 minutos y con **Actualizar precios** (solo
+  se piden las velas nuevas);
+- las monedas con **estrella** van primero en su día; la estrella se pone o se quita en la
+  propia fila;
 - filtros **Todos / Spot / Futuros / No repetidas** y orden por subida, bajada, mayor máximo,
   peor mínimo, moneda u orden del escaneo;
 - al pulsar una moneda se abre su gráfico (1D por defecto) con una línea en el precio del
@@ -111,7 +131,18 @@ y pega una clave de GitHub (*fine-grained token*) creada en
 La clave se guarda solo en ese navegador y solo se envía a GitHub. Cada día queda como un
 archivo `docs/seguimiento/AAAA-MM-DD.json`, y el workflow **Web** los une en
 `seguimiento.json` al publicar la página (en otros dispositivos aparece en un minuto). Lo que
-escaneas sin conexión con GitHub se sube al conectarlo.
+escaneas sin conexión con GitHub se sube al conectarlo. Las estrellas se suben unos segundos
+después del último cambio, en un solo guardado, y si un escaneo repetido no cambia nada no se
+crea ningún commit.
+
+**Hasta cuándo se guarda.** En el repositorio, **para siempre**: cada día es un archivo que
+solo se borra con **Borrar**. GitHub no los caduca, y a unos 20 KB por día el repositorio tardaría
+más de cien años en llegar a sus límites. El navegador guarda una copia de hasta unos 2,5 MB (meses
+de escaneos); si se llena, olvida primero los días más antiguos que ya están en GitHub, que se
+siguen viendo desde allí. Sin GitHub conectado, esa copia del navegador es la única, así que
+borrar los datos del navegador la borra. La clave de GitHub caduca en la fecha que elegiste al
+crearla: entonces la página avisa de que no es válida o ha caducado, sigue guardando en el
+navegador y lo sube todo al conectar una clave nueva.
 
 ## Workflows de GitHub
 
