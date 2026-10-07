@@ -683,7 +683,9 @@
    "quote": "USDT",
    "precio": 0.06106,
    "hora": "2026-10-07T15:20:31.466Z",
-   "intervalo": "1d"
+   "intervalo": "1d",
+   "estrella": true,
+   "estrella_hora": "2026-10-07T15:22:26.853Z"
   },
   {
    "mercado": "futures",
