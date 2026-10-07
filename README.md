@@ -48,6 +48,13 @@ no hace falta ningún servidor ni que Binance acepte las IP de GitHub.
   lista **se actualiza al momento mientras escribes**, sin volver a escanear: el escaneo
   guarda todas las monedas con MA(7) < MA(25) y los filtros eligen entre ellas. **Restablecer**
   vuelve a los valores por defecto, y la página recuerda los filtros para la próxima vez.
+- **Acumulación: velas entre ± X % durante al menos N días** (casilla para activarlo). Deja solo
+  las monedas que, justo antes de la vela evaluada (la que toma fuerza), tuvieron al menos N
+  velas seguidas que subieron o bajaron como mucho un X % de la apertura al cierre. Por
+  ejemplo, con 4 % y 5 días: una moneda con velas de +3,5 %, −3 %, +1 %, −0,5 % y +2 % pasa; si
+  una de esas velas fue de +9 %, no. Se suma a los demás filtros, la tarjeta dice cuántas velas
+  lleva acumulando y el gráfico sombrea esas velas. Con velas que no son 1D cuenta velas en vez
+  de días.
 - Una **tarjeta por moneda** con su gráfico de velas y las tres medias con los colores de
   Binance (MA(7) amarillo, MA(25) rosa, MA(99) morado), la variación de la vela, cuánto está
   sobre la MA(7), cuánto le falta a la MA(7) para cruzar la MA(25), las velas seguidas sobre
@@ -105,17 +112,19 @@ En la pestaña **Seguimiento**:
   | **Precio actual** | el de Binance ahora, actualizado cada minuto |
   | **Mínimo** | el precio más bajo **desde el escaneo**, con su % frente al precio de seguimiento |
   | **Máximo** | el precio más alto **desde el escaneo**, con su % frente al precio de seguimiento |
+  | **Rumbo al 50** | cuántos días tardó el máximo en llegar a **+50 %** sobre el precio de seguimiento, y la fecha (por ejemplo, «3 días · 8 oct»); esa fila se pinta de verde. «—» mientras no llegue |
   | **Variación** | precio actual frente al precio de seguimiento |
   | **Escaneo** | hora del escaneo y temporalidad |
 
-  y un resumen: media, cuántas suben y bajan, la mejor, la peor y cuántas tienen estrella. El
+  y un resumen: media, cuántas suben y bajan, la mejor, la peor, cuántas tienen estrella y
+  cuántas llegaron al +50 %. El
   mínimo y el máximo salen de las velas de Binance desde el minuto del escaneo (el precio de
   seguimiento también cuenta) y se recalculan cada 5 minutos y con **Actualizar precios** (solo
   se piden las velas nuevas);
 - las monedas con **estrella** van primero en su día; la estrella se pone o se quita en la
   propia fila;
 - filtros **Todos / Spot / Futuros / No repetidas** y orden por subida, bajada, mayor máximo,
-  peor mínimo, moneda u orden del escaneo;
+  peor mínimo, rumbo al 50 (las que llegaron antes), moneda u orden del escaneo;
 - al pulsar una moneda se abre su gráfico (1D por defecto) con una línea en el precio del
   seguimiento y una flecha en la vela de ese día;
 - **Borrar** quita un día.
@@ -239,7 +248,14 @@ Solo usa datos públicos de mercado, no necesita API key.
 
 ```bash
 pip install -r requirements-dev.txt
+python -m playwright install chromium   # para las pruebas de la web
 python -m pytest
 ```
+
+Además de las del scanner en Python, `tests/test_web_browser.py` abre la web en Chromium con
+Binance y GitHub simulados y comprueba el escaneo (peticiones que no responden, errores y
+pausas de Binance), el guardado en GitHub tras escanear, las estrellas, las columnas del
+seguimiento, «Rumbo al 50», el filtro de acumulación y la vista en el móvil. El workflow
+**Scanner** las pasa en cada cambio. Sin Playwright instalado se omiten.
 
 > Esto es una herramienta de filtrado, no una recomendación de inversión.
