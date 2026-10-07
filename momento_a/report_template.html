@@ -142,6 +142,7 @@ input[type="search"] { width: 13rem; max-width: 100%; }
 .seg button[aria-pressed="true"] .dot { background: var(--panel); }
 .card-foot { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 13px; color: var(--muted); }
 .card-foot b { font: 500 13px var(--font-mono); color: var(--fg); font-variant-numeric: tabular-nums; }
+.card-foot .acum-tag b { color: var(--accent); }
 
 body.tracking .scan-only { display: none !important; }
 .seg.views { align-self: center; }
@@ -154,6 +155,10 @@ body.tracking .scan-only { display: none !important; }
 .filters input[type="number"] { width: 8rem; max-width: 100%; padding: 7px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; color: var(--fg); font-family: var(--font-mono); }
 .filters input.short { width: 7.5rem; }
 .filters-note { font-size: 12.5px; color: var(--muted); }
+.filters .acum { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; color: var(--muted); }
+.filters .acum b { font-weight: 600; color: var(--fg); }
+.filters input.tiny { width: 4.5rem; }
+.filters .acum.off label:not(.check) { opacity: 0.55; }
 .track { display: grid; gap: 14px; }
 .track-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 .track-bar label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
@@ -199,13 +204,19 @@ body.tracking .scan-only { display: none !important; }
 .coins tr.starred td:first-child { box-shadow: inset 3px 0 0 var(--ma-fast); }
 .day-stats .stars b { color: var(--ma-fast); }
 .coins .muted { color: var(--muted); font-size: 13px; }
+/* Rumbo al 50: la fila de una moneda cuyo máximo llegó a +50 % va en verde. */
+.coins tbody tr.hit50 { background: color-mix(in srgb, var(--up) 13%, transparent); }
+.coins tbody tr.hit50:hover td, .coins tbody tr.hit50:focus-visible td { background: color-mix(in srgb, var(--up) 21%, transparent); }
+.coins .c-r50 { color: var(--muted); }
+.coins .c-r50.hit { color: var(--up); }
+.coins .c-r50 b { font: 600 13.5px var(--font-mono); }
 .chgbar { display: inline-block; position: relative; width: 52px; height: 6px; margin-left: 10px; vertical-align: middle; background: var(--grid); border-radius: 3px; overflow: hidden; }
 .chgbar i { position: absolute; top: 0; bottom: 0; left: 0; background: currentColor; border-radius: 3px; }
 .coins td small { font-size: 12px; margin-left: 6px; }
 /* En el móvil cada moneda ocupa tres líneas: moneda y variación; precio entonces y ahora; mínimo y máximo. */
 @media (max-width: 640px) {
   .coins thead, .coins .col-scan, .chgbar { display: none; }
-  .coins tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "coin pct" "then now" "min max"; gap: 2px 12px; padding: 9px 12px; border-bottom: 1px solid var(--grid); }
+  .coins tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "coin pct" "then now" "min max" "r50 r50"; gap: 2px 12px; padding: 9px 12px; border-bottom: 1px solid var(--grid); }
   .coins tbody tr:last-child { border-bottom: 0; }
   .coins tr.starred { box-shadow: inset 3px 0 0 var(--ma-fast); }
   .coins tr.starred td:first-child { box-shadow: none; }
@@ -219,6 +230,9 @@ body.tracking .scan-only { display: none !important; }
   .coins .c-now { grid-area: now; font-size: 12.5px; }
   .coins .c-min { grid-area: min; text-align: left; font-size: 12.5px; }
   .coins .c-max { grid-area: max; font-size: 12.5px; }
+  .coins .c-r50 { grid-area: r50; text-align: left; font-size: 12.5px; }
+  .coins .c-r50:not(.hit) { display: none; }
+  .coins .c-r50::before { content: attr(data-label) " "; font-family: var(--font-body); }
   .coins .c-then::before, .coins .c-now::before, .coins .c-min::before, .coins .c-max::before { content: attr(data-label) " "; color: var(--muted); font-family: var(--font-body); }
 }
 .empty { padding: 28px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; }
@@ -307,6 +321,11 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     <label class="check" title="Basta con MA7 &lt; MA25"><input id="f-noma99" type="checkbox"> No exigir MA25 &lt; MA99</label>
     <label class="check"><input id="f-red" type="checkbox"> Incluir velas rojas</label>
     <label class="check" title="Evaluar la última vela cerrada en vez de la vela en curso"><input id="f-closed" type="checkbox"> Vela cerrada</label>
+    <span class="acum" id="f-acum-box" title="Velas seguidas, justo antes de la vela evaluada, que subieron o bajaron como mucho ese % (de apertura a cierre)">
+      <label class="check"><input id="f-acum" type="checkbox"> <b>Acumulación:</b></label>
+      <label>velas entre ± <input id="f-acum-pct" class="tiny" type="number" min="0" step="0.5" value="4" inputmode="decimal" aria-label="Variación máxima de cada vela, en %"> %</label>
+      <label>durante al menos <input id="f-acum-n" class="tiny" type="number" min="1" step="1" value="5" inputmode="numeric" aria-label="Número mínimo de velas seguidas"> <span id="f-acum-unit">días</span></label>
+    </span>
     <button class="btn small" id="f-reset" type="button">Restablecer</button>
     <span class="filters-note" id="f-note"></span>
   </div>
@@ -350,6 +369,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
           <option value="bajada">Mayor bajada</option>
           <option value="maximo">Mayor máximo</option>
           <option value="minimo">Peor mínimo</option>
+          <option value="rumbo">Rumbo al 50 (las que llegaron antes)</option>
           <option value="moneda">Moneda</option>
           <option value="escaneo">Orden del escaneo</option>
         </select>
@@ -468,6 +488,12 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     for (const [lim, s] of [[1e9, "B"], [1e6, "M"], [1e3, "K"]]) if (Math.abs(v) >= lim) return (v / lim).toFixed(2) + s;
     return v.toFixed(0);
   }
+  // Las velas de la acumulación son días con velas 1D (las del escaneo por defecto) y velas en otras temporalidades.
+  function acumUnit(n) {
+    const daily = !state.data || state.data.intervalo === "1d";
+    return daily ? (n === 1 ? "día" : "días") : (n === 1 ? "vela" : "velas");
+  }
+  function acumText(a) { return a.n + " " + acumUnit(a.n) + " ±" + fmtNum(a.pct) + "%"; }
   function bars(it) { return it.velas_sobre_ma7 == null ? "-" : String(it.velas_sobre_ma7); }
   // Cuánto (%) tiene que subir la MA7 para cruzar la MA25.
   function gapToMid(it) { return it.ma7 && it.ma25 ? (it.ma25 - it.ma7) / it.ma7 * 100 : null; }
@@ -542,7 +568,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   }
   // Filtros (los mismos criterios que el workflow Scanner): MA7 < MA25 siempre; MA25 < MA99, precio cerca o
   // encima de la MA7, vela verde, volumen y vela cerrada se cambian en la barra «Filtros» y se aplican al momento.
-  const DEFAULT_FILTERS = { tolerancia: 2, max_encima: null, ma99: true, verde: true, cerrada: false, min_volumen: 0 };
+  // Acumulación: al menos acum_dias velas seguidas, justo antes de la vela evaluada, con variación dentro de ±acum_pct %.
+  const DEFAULT_FILTERS = { tolerancia: 2, max_encima: null, ma99: true, verde: true, cerrada: false, min_volumen: 0,
+    acumulacion: false, acum_pct: 4, acum_dias: 5 };
   state.filters = Object.assign({}, DEFAULT_FILTERS, readJSON("filtros", {}));
   function criteria() { return state.filters; }
   function passes(open, close, f, m, s, crit) {
@@ -629,7 +657,25 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       const ms = (TF_MINUTES[it.intervalo || state.data.intervalo] || 0) * 60000;
       if (rows[rows.length - 1][0] + ms > refMs) rows = rows.slice(0, -1);  // quita la vela en curso
     }
-    return evaluateRows(rows, crit);
+    const ev = evaluateRows(rows, crit);
+    if (ev && crit.acumulacion) {
+      ev.acum = accumulation(rows, crit.acum_pct);
+      if (ev.acum.n < crit.acum_dias) return null;
+    }
+    return ev;
+  }
+  // Acumulación: velas seguidas, justo antes de la vela evaluada (la que toma fuerza), que subieron o bajaron
+  // como mucho pct % de la apertura al cierre. Devuelve cuántas son y la apertura de la primera y la última.
+  function accumulation(rows, pct) {
+    const out = { n: 0, desde: null, hasta: null, pct };
+    for (let i = rows.length - 2; i >= 0; i--) {
+      const open = rows[i][1], close = rows[i][4];
+      if (!(open > 0) || Math.abs((close - open) / open * 100) > pct + 1e-9) break;
+      out.n++;
+      out.desde = rows[i][0];
+      if (out.hasta == null) out.hasta = rows[i][0];
+    }
+    return out;
   }
   function applyFilters() {
     const crit = criteria();
@@ -637,6 +683,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     for (const it of state.items) {
       const ev = evaluateItem(it, crit, refMs);
       it._ok = !!ev;
+      it._acum = ev && ev.acum && ev.acum.n ? ev.acum : null;
       if (ev) {
         Object.assign(it, { vela_pct: ev.velaPct, ma7: ev.ma7, ma25: ev.ma25, ma99: ev.ma99, vs_ma7_pct: ev.vsMa7,
           ma7_vs_ma25_pct: ev.gap, vs_ma99_pct: ev.vsMa99, velas_sobre_ma7: ev.bars });
@@ -653,6 +700,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       max_encima: $("f-max").value.trim() === "" ? null : val("f-max", null),
       min_volumen: val("f-vol", 0),
       ma99: !$("f-noma99").checked, verde: !$("f-red").checked, cerrada: $("f-closed").checked,
+      acumulacion: $("f-acum").checked, acum_pct: val("f-acum-pct", DEFAULT_FILTERS.acum_pct),
+      acum_dias: Math.max(1, Math.round(val("f-acum-n", DEFAULT_FILTERS.acum_dias))),
     };
   }
   function writeFilterInputs(f) {
@@ -662,10 +711,15 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     $("f-noma99").checked = !f.ma99;
     $("f-red").checked = !f.verde;
     $("f-closed").checked = !!f.cerrada;
+    $("f-acum").checked = !!f.acumulacion;
+    $("f-acum-pct").value = f.acum_pct ?? DEFAULT_FILTERS.acum_pct;
+    $("f-acum-n").value = f.acum_dias ?? DEFAULT_FILTERS.acum_dias;
+    $("f-acum-box").classList.toggle("off", !f.acumulacion);
   }
   let filterTimer = null;
   function onFilterInput() {
     state.filters = readFilters();
+    $("f-acum-box").classList.toggle("off", !state.filters.acumulacion);
     store.set("filtros", JSON.stringify(state.filters));
     clearTimeout(filterTimer);  // mientras se escribe, se espera un instante para no redibujar en cada tecla
     filterTimer = setTimeout(() => { if (state.data) applyFilters(); }, 150);
@@ -683,6 +737,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     cond.append("  ·  precio ≥ ", h("span", { class: "c-fast", text: "MA" + f }), " −" + fmtNum(cr.tolerancia) + "%");
     if (cr.max_encima != null) cond.append(" y ≤ +" + fmtNum(cr.max_encima) + "%");
     if (cr.verde) cond.append("  ·  vela verde");
+    if (cr.acumulacion) cond.append("  ·  acumulación ±" + fmtNum(cr.acum_pct) + "% ≥ " + cr.acum_dias + " " + acumUnit(cr.acum_dias));
+    $("f-acum-unit").textContent = acumUnit(2);
     const meta = $("meta");
     meta.textContent = "";
     const add = (dt, dd) => meta.append(h("div", null, h("dt", { text: dt }), h("dd", { text: dd })));
@@ -821,7 +877,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
         h("span", null, "vs MA" + f + " ", h("b", { text: fmtPct(it.vs_ma7_pct) })),
         h("span", null, "Falta ", h("b", { text: fmtGap(gapToMid(it)) }), " a MA" + m),
         h("span", null, h("b", { text: bars(it) }), (it.velas_sobre_ma7 === 1 ? " vela" : " velas") + " ≥ MA" + f),
-        h("span", null, "Vol ", h("b", { text: fmtVol(it.volumen_24h) }))));
+        h("span", null, "Vol ", h("b", { text: fmtVol(it.volumen_24h) })),
+        it._acum ? h("span", { class: "acum-tag", title: "Velas seguidas antes de la vela evaluada con variación dentro del margen" }, "Acumulación ", h("b", { text: acumText(it._acum) })) : null));
     el.addEventListener("click", () => openViewer(index));
     el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openViewer(index); } });
     return el;
@@ -880,6 +937,12 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       const alpha = (c) => c + (c.startsWith("#") && c.length === 7 ? "66" : "");
       entry.volume.setData(seriesData(entry.item, entry.tf).volume.map((v) => ({ time: v.time, value: v.value, color: alpha(v.up ? t.up : t.down) })));
     }
+    if (entry.acum) {
+      const a = entry.item._acum, rows = rowsFor(entry.item, entry.tf), sd = seriesData(entry.item, entry.tf);
+      const shade = t.accent + (t.accent.startsWith("#") && t.accent.length === 7 ? "29" : "");
+      entry.acum.applyOptions({ topColor: shade, bottomColor: shade, lineColor: "transparent" });
+      entry.acum.setData(rows.flatMap((k, i) => (a && k[0] >= a.desde && k[0] <= a.hasta ? [{ time: sd.candles[i].time, value: 1 }] : [])));
+    }
     if (entry.entryLine) entry.entryLine.applyOptions({ color: t.accent });
     if (entry.marker) entry.candles.setMarkers([Object.assign({}, entry.marker, { color: t.accent })]);
   }
@@ -894,6 +957,13 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     if ((TF_MINUTES[tf] || 0) >= 1440) chart.applyOptions({ timeScale: { timeVisible: false } });  // velas de días: solo la fecha
     const d = decimals(it.precio);
     const priceFormat = { type: "price", precision: d, minMove: Math.pow(10, -d) };
+    // Acumulación: una franja sombreada detrás de las velas que cuentan (se añade antes para quedar detrás).
+    let acum = null;
+    if (it._acum && tf === (it.intervalo || state.data.intervalo)) {
+      acum = chart.addAreaSeries({ priceScaleId: "acum", lineVisible: false, lastValueVisible: false, priceLineVisible: false,
+        crosshairMarkerVisible: false, autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 1 } }) });
+      chart.priceScale("acum").applyOptions({ visible: false, scaleMargins: { top: 0, bottom: 0 } });
+    }
     const candles = chart.addCandlestickSeries({ priceFormat });
     candles.setData(sd.candles);
     const mas = sd.mas.map((data) => {
@@ -906,7 +976,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       volume = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol", lastValueVisible: false, priceLineVisible: false });
       chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
     }
-    const entry = { chart, candles, mas, volume, item: it, isBig, tf };
+    const entry = { chart, candles, mas, volume, acum, item: it, isBig, tf };
     if (isBig && it._seguimiento) markTracking(entry, sd, rowsFor(it, tf), t);
     applyColors(entry, t);
     const n = sd.candles.length;
@@ -1006,6 +1076,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
         h("span", null, "Falta ", h("b", { text: fmtGap(gapToMid(it)) }), " a MA" + m),
         h("span", null, h("b", { text: bars(it) }), (it.velas_sobre_ma7 === 1 ? " vela" : " velas") + " ≥ MA" + f),
         h("span", null, "Vol 24h ", h("b", { text: fmtVol(it.volumen_24h) })),
+        it._acum ? h("span", null, "Acumulación ", h("b", { text: acumText(it._acum) })) : null,
         it.var_24h_pct == null ? null : h("span", null, "24h ", h("b", { class: it.var_24h_pct >= 0 ? "up" : "down", text: fmtPct(it.var_24h_pct) })),
         h("span", null, h("b", { text: (index + 1) + "/" + state.view.length })));
     }
@@ -1029,6 +1100,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       pct == null ? null : h("span", null, "Variación ", h("b", { class: pct >= 0 ? "up" : "down", text: fmtPct(pct) })),
       sg.min == null ? null : h("span", null, "Mínimo ", h("b", { text: fmtPrice(sg.min) }), " ", h("b", { class: "down", text: fmtPct(sg.minPct) })),
       sg.max == null ? null : h("span", null, "Máximo ", h("b", { text: fmtPrice(sg.max) }), " ", h("b", { class: "up", text: fmtPct(sg.maxPct) })),
+      sg.rumbo ? h("span", null, "Rumbo al 50 ", h("b", { class: "up", text: rumboText(sg.rumbo) })) : null,
       h("span", null, h("b", { text: (index + 1) + "/" + state.view.length })));
   }
   function drawBig(it, index) {
@@ -1164,7 +1236,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   // Cada petición tiene un tiempo máximo y se reintenta: una respuesta que no llega ya no deja el escaneo parado.
   const limits = {}, workingBase = {};
   const NEVER = new AbortController().signal;
-  const STALL_MS = 15000;  // tiempo máximo de una petición (el doble para las listas grandes)
+  const STALL_MS = window.__MOMENTO_STALL_MS || 15000;  // tiempo máximo de una petición (el doble para las listas grandes); las pruebas lo acortan
   class BinanceApi {
     // opts.background: espera mientras haya un escaneo en marcha. opts.onWait(ms): avisa de una espera larga.
     constructor(key, signal, opts) {
@@ -1506,7 +1578,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     }
   } catch (err) { /* preferencias no válidas */ }
   writeFilterInputs(state.filters);
-  for (const id of ["f-tol", "f-max", "f-vol", "f-noma99", "f-red", "f-closed"]) {
+  for (const id of ["f-tol", "f-max", "f-vol", "f-noma99", "f-red", "f-closed", "f-acum", "f-acum-pct", "f-acum-n"]) {
     $(id).addEventListener("input", onFilterInput);
     $(id).addEventListener("change", onFilterInput);
   }
@@ -1522,6 +1594,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     bajada: (a, b) => (a.pct ?? Infinity) - (b.pct ?? Infinity),
     maximo: (a, b) => (b.maxPct ?? -Infinity) - (a.maxPct ?? -Infinity),
     minimo: (a, b) => (a.minPct ?? Infinity) - (b.minPct ?? Infinity),
+    rumbo: (a, b) => (a.rumbo ? a.rumbo.dias : Infinity) - (b.rumbo ? b.rumbo.dias : Infinity) || (b.maxPct ?? -Infinity) - (a.maxPct ?? -Infinity),
     moneda: (a, b) => a.simbolo.localeCompare(b.simbolo),
     escaneo: (a, b) => a.orden - b.orden,
   };
@@ -1836,12 +1909,18 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const rows = await api.get(cfg.klines, { symbol, interval: tf, startTime: Math.floor(from), limit }, cfg.klinesW(limit));
     return rows.map(row);
   }
+  // Rumbo al 50: el máximo llega a +50 % sobre el precio de seguimiento. Se guarda cuándo pasó por primera vez (llego).
+  const RUMBO = 1.5;
   async function updateExtremes(fecha, c) {
     const cfg = API[c.mercado], start = Date.parse(c.hora);
     if (!cfg || !isFinite(start) || !(c.precio > 0)) return;
-    const key = extKey(fecha, c), prev = track.extremes[key];
+    const key = extKey(fecha, c), target = c.precio * RUMBO;
+    let prev = track.extremes[key];
+    // Calculados antes de existir «Rumbo al 50»: si ya habían pasado del +50 % no se sabe cuándo, así que se recalculan.
+    if (prev && prev.max >= target && !prev.llego) prev = null;
     const from = prev && prev.hasta ? prev.hasta : start;
     let min = prev ? prev.min : c.precio, max = prev ? prev.max : c.precio;  // el precio del seguimiento también cuenta
+    let llego = prev ? prev.llego || null : null;
     const api = apiFor(c.mercado, true);  // espera si hay un escaneo en marcha
     const [tf, len] = pickTf(Date.now() - from);
     const rows = [];
@@ -1853,9 +1932,13 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const limit = Math.min(1000, Math.ceil((Date.now() - from) / len) + 2);
     const big = (await candlesFrom(api, cfg, c.simbolo, tf, from, limit)).filter((r) => (len > 60e3 ? r[0] >= from : r[0] + 60e3 > from));
     rows.push(...big);
-    for (const r of rows) { if (r[3] < min) min = r[3]; if (r[2] > max) max = r[2]; }
+    for (const r of rows.sort((a, b) => a[0] - b[0])) {  // en orden: la primera vela que pasa del +50 % da la fecha
+      if (r[3] < min) min = r[3];
+      if (r[2] > max) max = r[2];
+      if (!llego && r[2] >= target) llego = Math.max(r[0], start);
+    }
     // La última vela sigue abierta: la próxima vez se empieza desde ella.
-    track.extremes[key] = { min, max, hasta: big.length ? big[big.length - 1][0] : from };
+    track.extremes[key] = { min, max, hasta: big.length ? big[big.length - 1][0] : from, llego };
   }
   let extremesRun = null;
   function refreshExtremes() {
@@ -1900,8 +1983,13 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       const ext = track.extremes[extKey(day.fecha, c)];
       let min = ext ? ext.min : null, max = ext ? ext.max : null;
       if (ext && now != null) { min = Math.min(min, now); max = Math.max(max, now); }
+      // Rumbo al 50: si el precio actual acaba de pasar del +50 %, cuenta hoy hasta que se recalculen las velas.
+      let llego = ext && ext.llego ? ext.llego : null;
+      if (!llego && max != null && c.precio > 0 && max >= c.precio * RUMBO) llego = Date.now();
+      const llegoDia = llego ? candleDayOf(new Date(llego).toISOString(), day.fecha) : null;
+      const rumbo = llego ? { fecha: llegoDia, dias: Math.max(0, Math.round((dayDate(llegoDia) - dayDate(day.fecha)) / 864e5)) } : null;
       return Object.assign({}, c, { ahora: now == null ? null : now, pct: pctOf(now), orden: i,
-        min, max, minPct: pctOf(min), maxPct: pctOf(max) });
+        min, max, minPct: pctOf(min), maxPct: pctOf(max), rumbo });
     });
   }
   function summarize(coins) {
@@ -1949,6 +2037,13 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     wrap.append(ask);
     return wrap;
   }
+  // Rumbo al 50: «3 días · 8 oct» (el día en que el máximo pasó del +50 %) o «—» mientras no llegue.
+  function rumboText(r) { return (r.dias === 0 ? "el mismo día" : r.dias === 1 ? "1 día" : r.dias + " días") + " · " + shortDate(r.fecha); }
+  function rumboCell(r) {
+    if (!r) return ["—"];
+    const [days, date] = rumboText(r).split(" · ");
+    return [h("b", { text: days }), h("small", { text: "· " + date })];
+  }
   // Precio y, al lado, cuánto supone frente al precio del seguimiento.
   function extremeCell(value, pct) {
     if (value == null) return ["—"];
@@ -1963,6 +2058,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       h("th", { class: "r", text: "Precio actual" }),
       h("th", { class: "r", text: "Mínimo", title: "Precio más bajo desde el escaneo" }),
       h("th", { class: "r", text: "Máximo", title: "Precio más alto desde el escaneo" }),
+      h("th", { class: "r", text: "Rumbo al 50", title: "Días que tardó el máximo en llegar a +50 % sobre el precio de seguimiento, y la fecha en que llegó" }),
       h("th", { class: "r", text: "Variación", title: "Precio actual frente al precio de seguimiento" }),
       h("th", { class: "col-scan", text: "Escaneo" }))));
     const body = h("tbody");
@@ -1973,13 +2069,15 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
         const again = $("track-days").querySelector('[data-day="' + day.fecha + '"] tr[data-key="' + coinKey(c) + '"] .star');
         if (again) again.focus();
       });
-      const tr = h("tr", { tabindex: "0", class: c.estrella ? "starred" : null, "data-key": coinKey(c), title: "Ver el gráfico de " + c.simbolo },
+      const cls = [c.estrella ? "starred" : "", c.rumbo ? "hit50" : ""].filter(Boolean).join(" ") || null;
+      const tr = h("tr", { tabindex: "0", class: cls, "data-key": coinKey(c), title: "Ver el gráfico de " + c.simbolo },
         h("td", { class: "c-coin" }, star, h("span", { class: "coin" }, c.base || c.simbolo, h("small", { text: c.quote ? "/" + c.quote : "" })),
           h("span", { class: "badge", text: MARKET_NAMES[c.mercado] || c.mercado })),
         h("td", { class: "r num c-then", "data-label": shortDate(day.fecha), text: fmtPrice(c.precio) }),
         h("td", { class: "r num c-now", "data-label": "ahora", text: c.ahora == null ? "—" : fmtPrice(c.ahora) }),
         h("td", { class: "r num c-min", "data-label": "mín" }, ...extremeCell(c.min, c.minPct)),
         h("td", { class: "r num c-max", "data-label": "máx" }, ...extremeCell(c.max, c.maxPct)),
+        h("td", { class: "r c-r50" + (c.rumbo ? " hit" : ""), "data-label": "+50% en" }, ...rumboCell(c.rumbo)),
         h("td", { class: "r num c-pct " + (c.pct == null ? "" : c.pct >= 0 ? "up" : "down") }, c.pct == null ? "—" : fmtPct(c.pct), changeBar(c.pct)),
         h("td", { class: "col-scan muted", text: timeOf(c.hora) + (c.intervalo ? " · velas " + tfLabel(c.intervalo) : "") }));
       const open = () => openTrackedChart(day, coins, i);
@@ -1996,7 +2094,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const coins = withPrices(day).sort((a, b) => (b.estrella ? 1 : 0) - (a.estrella ? 1 : 0) || sort(a, b));
     const open = isOpen(day.fecha, index);
     const s = summarize(coins);
-    const starred = coins.filter((c) => c.estrella).length;
+    const starred = coins.filter((c) => c.estrella).length, hits = coins.filter((c) => c.rumbo).length;
     const toggle = h("button", { class: "day-toggle", type: "button", "aria-expanded": String(open) });
     toggle.innerHTML = ICON_CHEVRON;
     toggle.append(h("h2", { text: "Seguimiento " + dayTitle(day.fecha) }));
@@ -2004,6 +2102,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const stats = h("div", { class: "day-stats" },
       h("span", null, h("b", { text: String(coins.length) }), coins.length === 1 ? " moneda" : " monedas"),
       starred ? h("span", { class: "stars" }, h("b", { text: "★ " + starred }), " con estrella") : null,
+      hits ? h("span", null, h("b", { class: "up", text: String(hits) }), hits === 1 ? " llegó al +50%" : " llegaron al +50%") : null,
       s.n ? h("span", null, "Media ", h("b", { class: s.avg >= 0 ? "up" : "down", text: fmtPct(s.avg) })) : null,
       s.n ? h("span", null, h("b", { class: "up", text: "▲ " + s.up }), " suben · ", h("b", { class: "down", text: "▼ " + s.down }), " bajan") : null,
       s.n > 1 ? h("span", null, "Mejor ", h("b", { text: (s.best.base || s.best.simbolo) + " " + fmtPct(s.best.pct) })) : null,
@@ -2071,7 +2170,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     state.view = coins.map((c) => ({
       mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c.ahora == null ? c.precio : c.ahora,
       var_24h_pct: null, vela_pct: null, vs_ma7_pct: null, ma7_vs_ma25_pct: null, vs_ma99_pct: null, velas_sobre_ma7: null,
-      _seguimiento: { fecha: day.fecha, precio: c.precio, hora: c.hora, min: c.min, max: c.max, minPct: c.minPct, maxPct: c.maxPct },
+      _seguimiento: { fecha: day.fecha, precio: c.precio, hora: c.hora, min: c.min, max: c.max, minPct: c.minPct, maxPct: c.maxPct, rumbo: c.rumbo },
     }));
     openViewer(index);
   }

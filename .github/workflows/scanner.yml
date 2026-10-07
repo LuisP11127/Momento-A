@@ -62,6 +62,8 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements-dev.txt
+      # Chromium para las pruebas de la web (escaneo, seguimiento, estrellas, filtros) con Binance y GitHub simulados.
+      - run: python -m playwright install --with-deps chromium
       - run: python -m pytest -q
       # La web guarda en el navegador la clave de GitHub del seguimiento: la librería de gráficos
       # se carga con una huella (SRI) y aquí se comprueba que coincide con el archivo del CDN.

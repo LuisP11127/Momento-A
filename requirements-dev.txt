@@ -1,2 +1,3 @@
 -r requirements.txt
 pytest>=7
+playwright>=1.45  # pruebas de la web en Chromium (tests/test_web_browser.py)
