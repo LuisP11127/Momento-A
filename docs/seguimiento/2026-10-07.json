@@ -1,0 +1,239 @@
+{
+ "fecha": "2026-10-07",
+ "monedas": [
+  {
+   "mercado": "spot",
+   "simbolo": "TRXUSDT",
+   "base": "TRX",
+   "quote": "USDT",
+   "precio": 0.333,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "PAXGUSDT",
+   "base": "PAXG",
+   "quote": "USDT",
+   "precio": 4117.96,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "PSGUSDT",
+   "base": "PSG",
+   "quote": "USDT",
+   "precio": 0.453,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "ATMUSDT",
+   "base": "ATM",
+   "quote": "USDT",
+   "precio": 1.012,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "CITYUSDT",
+   "base": "CITY",
+   "quote": "USDT",
+   "precio": 0.343,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "PORTOUSDT",
+   "base": "PORTO",
+   "quote": "USDT",
+   "precio": 0.45,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "BANANAUSDT",
+   "base": "BANANA",
+   "quote": "USDT",
+   "precio": 3.75,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "GPSUSDT",
+   "base": "GPS",
+   "quote": "USDT",
+   "precio": 0.0101,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "SOPHUSDT",
+   "base": "SOPH",
+   "quote": "USDT",
+   "precio": 0.00358,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "HOMEUSDT",
+   "base": "HOME",
+   "quote": "USDT",
+   "precio": 0.00552,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "WLFIUSDT",
+   "base": "WLFI",
+   "quote": "USDT",
+   "precio": 0.0544,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "UUSDT",
+   "base": "U",
+   "quote": "USDT",
+   "precio": 0.9998,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "KGSTUSDT",
+   "base": "KGST",
+   "quote": "USDT",
+   "precio": 0.011269,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "XAUTUSDT",
+   "base": "XAUT",
+   "quote": "USDT",
+   "precio": 4111.99,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "GENIUSUSDT",
+   "base": "GENIUS",
+   "quote": "USDT",
+   "precio": 0.3001,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "TRXUSDT",
+   "base": "TRX",
+   "quote": "USDT",
+   "precio": 0.33258,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "BANANAUSDT",
+   "base": "BANANA",
+   "quote": "USDT",
+   "precio": 3.735,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "BANUSDT",
+   "base": "BAN",
+   "quote": "USDT",
+   "precio": 0.06172,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "GPSUSDT",
+   "base": "GPS",
+   "quote": "USDT",
+   "precio": 0.010101,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "SIRENUSDT",
+   "base": "SIREN",
+   "quote": "USDT",
+   "precio": 0.02149,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "PAXGUSDT",
+   "base": "PAXG",
+   "quote": "USDT",
+   "precio": 4115.54,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "SOPHUSDT",
+   "base": "SOPH",
+   "quote": "USDT",
+   "precio": 0.003578,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "HOMEUSDT",
+   "base": "HOME",
+   "quote": "USDT",
+   "precio": 0.005506,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "WLFIUSDT",
+   "base": "WLFI",
+   "quote": "USDT",
+   "precio": 0.05444,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "XAUTUSDT",
+   "base": "XAUT",
+   "quote": "USDT",
+   "precio": 4109.61,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "GENIUSUSDT",
+   "base": "GENIUS",
+   "quote": "USDT",
+   "precio": 0.2996,
+   "hora": "2026-10-08T15:58:36.857Z",
+   "intervalo": "1d"
+  }
+ ]
+}
