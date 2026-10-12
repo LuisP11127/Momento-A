@@ -72,6 +72,17 @@
    "precio": 0.207,
    "hora": "2026-10-12T16:45:34.616Z",
    "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "HANAUSDT",
+   "base": "HANA",
+   "quote": "USDT",
+   "precio": 0.0129,
+   "hora": "2026-10-12T16:45:34.616Z",
+   "intervalo": "1d",
+   "estrella": true,
+   "estrella_hora": "2026-10-12T17:09:09.151Z"
   }
  ]
 }
