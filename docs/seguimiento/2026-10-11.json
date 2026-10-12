@@ -1,0 +1,77 @@
+{
+ "fecha": "2026-10-11",
+ "monedas": [
+  {
+   "mercado": "spot",
+   "simbolo": "RIFUSDT",
+   "base": "RIF",
+   "quote": "USDT",
+   "precio": 0.0854,
+   "hora": "2026-10-12T16:45:34.616Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "RIFUSDT",
+   "base": "RIF",
+   "quote": "USDT",
+   "precio": 0.08516,
+   "hora": "2026-10-12T16:45:34.616Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "ZEREBROUSDT",
+   "base": "ZEREBRO",
+   "quote": "USDT",
+   "precio": 0.029822,
+   "hora": "2026-10-12T16:45:34.616Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "TAGUSDT",
+   "base": "TAG",
+   "quote": "USDT",
+   "precio": 0.0006665,
+   "hora": "2026-10-12T16:45:34.616Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "WLFIUSDT",
+   "base": "WLFI",
+   "quote": "USDT",
+   "precio": 0.05705,
+   "hora": "2026-10-12T16:45:34.616Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "GWEIUSDT",
+   "base": "GWEI",
+   "quote": "USDT",
+   "precio": 0.02114,
+   "hora": "2026-10-12T16:45:34.616Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "BILLUSDT",
+   "base": "BILL",
+   "quote": "USDT",
+   "precio": 0.01022,
+   "hora": "2026-10-12T16:45:34.616Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "DATAIPUSDT",
+   "base": "DATAIP",
+   "quote": "USDT",
+   "precio": 0.207,
+   "hora": "2026-10-12T16:45:34.616Z",
+   "intervalo": "1d"
+  }
+ ]
+}
