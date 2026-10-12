@@ -83,6 +83,28 @@
    "intervalo": "1d",
    "estrella": true,
    "estrella_hora": "2026-10-12T17:09:09.151Z"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "BBUSDT",
+   "base": "BB",
+   "quote": "USDT",
+   "precio": 0.009337,
+   "hora": "2026-10-12T16:45:34.616Z",
+   "intervalo": "1d",
+   "estrella": true,
+   "estrella_hora": "2026-10-12T17:09:26.048Z"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "KATUSDT",
+   "base": "KAT",
+   "quote": "USDT",
+   "precio": 0.004534,
+   "hora": "2026-10-12T16:45:34.616Z",
+   "intervalo": "1d",
+   "estrella": true,
+   "estrella_hora": "2026-10-12T17:10:24.948Z"
   }
  ]
 }
