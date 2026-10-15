@@ -1,0 +1,50 @@
+{
+ "fecha": "2026-10-14",
+ "monedas": [
+  {
+   "mercado": "spot",
+   "simbolo": "PAXGUSDT",
+   "base": "PAXG",
+   "quote": "USDT",
+   "precio": 4160.54,
+   "hora": "2026-10-15T18:25:48.262Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "KGSTUSDT",
+   "base": "KGST",
+   "quote": "USDT",
+   "precio": 0.011278,
+   "hora": "2026-10-15T18:25:48.262Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "XAUTUSDT",
+   "base": "XAUT",
+   "quote": "USDT",
+   "precio": 4154.66,
+   "hora": "2026-10-15T18:25:48.262Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "PAXGUSDT",
+   "base": "PAXG",
+   "quote": "USDT",
+   "precio": 4158.99,
+   "hora": "2026-10-15T18:25:48.262Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "XAUTUSDT",
+   "base": "XAUT",
+   "quote": "USDT",
+   "precio": 4153.28,
+   "hora": "2026-10-15T18:25:48.262Z",
+   "intervalo": "1d"
+  }
+ ]
+}
