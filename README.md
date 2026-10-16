@@ -59,9 +59,12 @@ no hace falta ningún servidor ni que Binance acepte las IP de GitHub.
   Binance (MA(7) amarillo, MA(25) rosa, MA(99) morado), la variación de la vela, cuánto está
   sobre la MA(7), cuánto le falta a la MA(7) para cruzar la MA(25), las velas seguidas sobre
   la MA(7) y el volumen.
-- **Estrella** (☆ junto a ampliar): fija la moneda. En **Seguimiento** sale la primera de su día;
-  si la moneda no se había guardado (escaneo sin **Guardar en seguimiento**), se añade con su
-  precio del escaneo. Se guarda como el resto del seguimiento (navegador y GitHub).
+- **Estrella** (☆ junto a ampliar, y al lado del nombre en el gráfico a pantalla completa): fija
+  la moneda. En **Seguimiento** sale la primera de su día; si la moneda no se había guardado
+  (escaneo sin **Guardar en seguimiento**), se añade con su precio del escaneo. La estrella va
+  **solo en el día de ese escaneo**: si GNS salió el 13 y el 15 y le pones la estrella en el
+  escaneo del 15, la tiene el 15 y el 13 queda igual. Se guarda como el resto del seguimiento
+  (navegador y GitHub).
 - **Cumple en** marca en qué temporalidades (2h, 4h, 8h, 12h y 1D) se cumple también la
   condición.
 - Filtros **Todos / Spot / Futuros / No repetidas** (cada moneda una vez; si está en los dos
@@ -72,7 +75,11 @@ no hace falta ningún servidor ni que Binance acepte las IP de GitHub.
 - En la cuadrícula, la rueda del ratón desplaza la página. Al pulsar una tarjeta (o su botón
   de ampliar) el gráfico se abre a **pantalla completa**:
   - **la rueda del ratón o el pellizco acercan y alejan**, y arrastrando te mueves en el tiempo;
-  - botones `−` / `+` y «ver todo el historial» (teclas `-`, `+` y `0`);
+  - **todo el historial del par**: se abre con las 1000 velas más recientes y, al llegar al borde
+    izquierdo, carga las anteriores hasta la primera vela que tiene Binance; debajo del gráfico
+    se ve desde qué fecha hay velas;
+  - botones `−` / `+` y «ver todo el historial», que carga todo lo que falte y lo encuadra (teclas
+    `-`, `+` y `0`);
   - al pasar el ratón se ven apertura, máximo, mínimo, cierre y el valor de cada media;
   - selector de temporalidad propio (un punto marca dónde también se cumple la condición);
   - `←` / `→` pasan a la moneda anterior o siguiente y `Esc` cierra;
@@ -126,7 +133,7 @@ En la pestaña **Seguimiento**:
 - filtros **Todos / Spot / Futuros / No repetidas** y orden por subida, bajada, mayor máximo,
   peor mínimo, rumbo al 50 (las que llegaron antes), moneda u orden del escaneo;
 - al pulsar una moneda se abre su gráfico (1D por defecto) con una línea en el precio del
-  seguimiento y una flecha en la vela de ese día;
+  seguimiento y una flecha en la vela de ese día; su estrella, al lado del nombre, es la de ese día;
 - **Borrar** quita un día.
 
 **Dónde se guarda.** Siempre en el navegador donde escaneas. Para tenerlo también en el
