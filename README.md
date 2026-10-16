@@ -80,7 +80,10 @@ no hace falta ningún servidor ni que Binance acepte las IP de GitHub.
     se ve desde qué fecha hay velas;
   - botones `−` / `+` y «ver todo el historial», que carga todo lo que falte y lo encuadra (teclas
     `-`, `+` y `0`);
-  - al pasar el ratón se ven apertura, máximo, mínimo, cierre y el valor de cada media;
+  - al pasar el ratón se ven apertura, máximo, mínimo, cierre, la **variación de la vela** (de la
+    apertura al cierre) y el valor de cada media; sin el ratón encima, los de la última vela;
+  - al acercar el gráfico (unas 45 velas a la vista o menos), cada vela lleva su variación encima
+    si sube y debajo si baja;
   - selector de temporalidad propio (un punto marca dónde también se cumple la condición);
   - `←` / `→` pasan a la moneda anterior o siguiente y `Esc` cierra;
   - enlace directo al par en Binance.

@@ -952,7 +952,27 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       entry.acum.setData(rows.flatMap((k, i) => (a && k[0] >= a.desde && k[0] <= a.hasta ? [{ time: sd.candles[i].time, value: 1 }] : [])));
     }
     if (entry.entryLine) entry.entryLine.applyOptions({ color: t.accent });
-    if (entry.marker) entry.candles.setMarkers([Object.assign({}, entry.marker, { color: t.accent })]);
+    paintMarkers(entry, t);
+  }
+  // Con pocas velas a la vista (gráfico a pantalla completa acercado), cada vela lleva su variación encima
+  // (si sube) o debajo (si baja); con muchas no cabrían y basta con pasar el ratón.
+  const LABEL_BARS = 45;
+  function paintMarkers(entry, t) {
+    t = t || tokens();
+    const marks = entry.marker ? [Object.assign({}, entry.marker, { color: t.accent })] : [];
+    const r = entry.isBig ? entry.chart.timeScale().getVisibleLogicalRange() : null;
+    const sd = r ? seriesData(entry.item, entry.tf) : null;
+    if (sd && r.to - r.from <= LABEL_BARS) {
+      for (let i = Math.max(0, Math.ceil(r.from)); i <= Math.min(sd.candles.length - 1, Math.floor(r.to)); i++) {
+        const c = sd.candles[i];
+        if (!c.open || (entry.marker && entry.marker.time === c.time)) continue;
+        const pct = (c.close - c.open) / c.open * 100;
+        marks.push({ time: c.time, position: pct >= 0 ? "aboveBar" : "belowBar", shape: "circle", size: 0,
+          color: pct >= 0 ? t.up : t.down, text: fmtPct(pct) });
+      }
+    }
+    marks.sort((a, b) => a.time - b.time);
+    entry.candles.setMarkers(marks);
   }
   function buildChart(el, it, isBig, tf) {
     const sd = seriesData(it, tf);
@@ -1053,6 +1073,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       for (const [k, v] of [["A", c.open], ["M", c.high], ["m", c.low], ["C", c.close]]) {
         ohlc.append(h("b", { text: k + " " }), fmtPrice(v), "  ");
       }
+      // Variación de la vela, de la apertura al cierre (la vela bajo el ratón o, si no, la última).
+      const pct = c.open ? (c.close - c.open) / c.open * 100 : null;
+      ohlc.append(h("b", { text: "Var " }), h("span", { class: "var " + (pct >= 0 ? "up" : "down"), text: fmtPct(pct) }));
       $("v-legend").prepend(ohlc);
     }
   }
@@ -1154,7 +1177,13 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
           updateLegend(idx >= 0 && idx <= last ? idx : last);
         });
         // Al acercarse al borde izquierdo se piden las velas anteriores, hasta la primera del par.
-        big.chart.timeScale().subscribeVisibleLogicalRangeChange((r) => { if (r && r.from < 30) moreHistory(it, tf); });
+        let frame = 0;
+        big.chart.timeScale().subscribeVisibleLogicalRangeChange((r) => {
+          if (r && r.from < 30) moreHistory(it, tf);
+          cancelAnimationFrame(frame);
+          frame = requestAnimationFrame(() => { if (big) paintMarkers(big); });
+        });
+        paintMarkers(big);
       }
       updateHist(it, tf);
       // Al abrir, las 1000 velas más recientes (el gráfico ya se ve con las que había).
