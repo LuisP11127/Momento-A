@@ -1,0 +1,50 @@
+{
+ "fecha": "2026-10-15",
+ "monedas": [
+  {
+   "mercado": "spot",
+   "simbolo": "SUNUSDT",
+   "base": "SUN",
+   "quote": "USDT",
+   "precio": 0.01657,
+   "hora": "2026-10-16T20:03:47.609Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "XNOUSDT",
+   "base": "XNO",
+   "quote": "USDT",
+   "precio": 0.337,
+   "hora": "2026-10-16T20:03:47.609Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "KGSTUSDT",
+   "base": "KGST",
+   "quote": "USDT",
+   "precio": 0.011213,
+   "hora": "2026-10-16T20:03:47.609Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "SUNUSDT",
+   "base": "SUN",
+   "quote": "USDT",
+   "precio": 0.016552,
+   "hora": "2026-10-16T20:03:47.609Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "BASEDUSDT",
+   "base": "BASED",
+   "quote": "USDT",
+   "precio": 0.05421,
+   "hora": "2026-10-16T20:03:47.609Z",
+   "intervalo": "1d"
+  }
+ ]
+}
