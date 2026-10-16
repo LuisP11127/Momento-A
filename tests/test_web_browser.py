@@ -47,22 +47,25 @@ def short_date(d: date) -> str:
 
 
 # ---------- Binance simulada ----------
-def trend_klines(kind: str, tf: str, limit: int) -> list:
-    """Velas hasta ahora. match: bajista (−1 % por vela) con la última verde +5 % sobre la MA7.
-    jumpy: igual, con una vela de −5,7 % tres velas antes de la última. up: alcista."""
+def trend_klines(kind: str, tf: str, limit: int, end: int | None = None, listed: int | None = None) -> list:
+    """Velas hasta ahora (o hasta end). match: bajista (−1 % por vela) con la última verde +5 % sobre la MA7.
+    jumpy: igual, con una vela de −5,7 % tres velas antes de la última. up: alcista.
+    listed: velas que tiene el par desde que se listó (por defecto, sin límite)."""
     step = STEP[tf]
-    last = now_ms() // step
+    now_last = now_ms() // step
+    last = min(now_last, end // step) if end else now_last
+    first = now_last - listed + 1 if listed else -10**9
     out = []
-    for i in range(last - limit + 1, last + 1):
-        k = i - (last - 400)  # la serie no depende de cuántas velas se pidan
+    for i in range(max(last - limit + 1, first), last + 1):
+        k = i - (now_last - 400)  # la serie no depende de cuántas velas se pidan
         if kind == "up":
             o, c = 100 + k, 101 + k
         else:
             c = 1000 * 0.99 ** k
             o = 1000 * 0.99 ** (k - 1)
-            if i == last:
+            if i == now_last:
                 o, c = 1000 * 0.99 ** (k - 1), 1000 * 0.99 ** (k - 1) * 1.05
-            elif kind == "jumpy" and i == last - 3:
+            elif kind == "jumpy" and i == now_last - 3:
                 o = c * 1.06
         out.append([i * step, str(o), str(max(o, c) * 1.002), str(min(o, c) * 0.998), str(c), "1000",
                     i * step + step - 1, str(c * 1000), 10, "1", "1", "0"])
@@ -73,10 +76,12 @@ class Binance:
     """Mercados simulados. kinds: símbolo → tipo de velas; fail: símbolo → fallo («hang» la primera vez,
     «500» la primera vez, «429» la primera vez, «dead» siempre 500)."""
 
-    def __init__(self, spot: dict, futures: dict, fail: dict | None = None, klines=None, price=None):
+    def __init__(self, spot: dict, futures: dict, fail: dict | None = None, klines=None, price=None, listed=None):
         self.kinds = {"spot": spot, "futures": futures}
         self.fail = fail or {}
-        self.klines = klines or (lambda market, sym, tf, limit, start: trend_klines(self.kinds[market].get(sym, "up"), tf, limit))
+        self.listed = listed or {}
+        self.klines = klines or (lambda market, sym, tf, limit, start, end: trend_klines(
+            self.kinds[market].get(sym, "up"), tf, limit, end, self.listed.get(sym)))
         self.price = price or (lambda market, sym: 60.5)
         self.seen = {}
         self.calls = []
@@ -87,7 +92,7 @@ class Binance:
         market = "futures" if url.hostname.startswith("fapi") else "spot"
         table = self.kinds[market]
         sym = q.get("symbol")
-        self.calls.append((market, url.path, sym, q.get("interval"), q.get("limit")))
+        self.calls.append((market, url.path, sym, q.get("interval"), q.get("limit"), q.get("endTime")))
         if url.path.endswith("/exchangeInfo"):
             body = {"rateLimits": [{"rateLimitType": "REQUEST_WEIGHT", "interval": "MINUTE", "intervalNum": 1,
                                     "limit": 6000 if market == "spot" else 2400}],
@@ -108,7 +113,8 @@ class Binance:
             if how == "429" and n == 1:
                 return route.fulfill(status=429, body="{}", headers={**CORS, "Retry-After": "1"})
             start = int(q["startTime"]) if "startTime" in q else None
-            body = self.klines(market, sym, q["interval"], min(int(q["limit"]), 1000), start)
+            end = int(q["endTime"]) if "endTime" in q else None
+            body = self.klines(market, sym, q["interval"], min(int(q["limit"]), 1000), start, end)
         else:
             return route.fulfill(status=404, body="{}", headers=CORS)
         return route.fulfill(status=200, content_type="application/json", body=json.dumps(body), headers=CORS)
@@ -308,7 +314,7 @@ def test_rumbo_al_50_shows_days_and_date_and_paints_the_row(open_page):
             return 15.0 if t >= crossed else 10.0
         return 11.0
 
-    def klines(market, sym, tf, limit, start):
+    def klines(market, sym, tf, limit, start, end):
         step = STEP[tf]
         t = (start // step * step) if start else (now_ms() // step - limit + 1) * step
         out = []
@@ -361,7 +367,7 @@ def test_tracking_fits_on_a_phone(open_page):
             "precio": 0.00012345, "hora": hora, "intervalo": "1d", "estrella": True, "estrella_hora": hora}
     storage = {"seguimiento": {fecha: {"fecha": fecha, "monedas": [long]}},
                "seguimiento-extremos": {f"{fecha}|futures:1000BANANAS31USDT": {"min": 0.00009876, "max": 0.00023456, "hasta": now_ms()}}}
-    flat = lambda market, sym, tf, limit, start: [[now_ms() - 60_000, "0.0002", "0.0002", "0.0002", "0.0002", "1", now_ms(), "1", 1, "1", "1", "0"]]
+    flat = lambda market, sym, tf, limit, start, end: [[now_ms() - 60_000, "0.0002", "0.0002", "0.0002", "0.0002", "1", now_ms(), "1", 1, "1", "1", "0"]]
     binance = Binance(spot={}, futures={"1000BANANAS31USDT": "match"}, klines=flat, price=lambda market, sym: 0.0002)
     page = open_page(binance, storage=storage, mobile=True, path="#seguimiento")
     page.wait_for_function("() => /calculados/.test(document.getElementById('track-ext').textContent)", timeout=30_000)
@@ -371,4 +377,90 @@ def test_tracking_fits_on_a_phone(open_page):
         return t.width && t.right > r.right + 0.5; }).length""")
     assert overflow == 0
     assert page.evaluate("() => document.documentElement.scrollWidth <= document.documentElement.clientWidth")
+    assert page.errors == []
+
+
+def local_days(page) -> dict:
+    return page.evaluate("() => JSON.parse(localStorage.getItem('momento-a:seguimiento') || '{}')")
+
+
+def starred(days: dict, fecha: str, symbol: str) -> bool:
+    return any(c["simbolo"] == symbol and c.get("estrella") for c in days.get(fecha, {}).get("monedas", []))
+
+
+def test_viewer_star_marks_the_coin_only_on_the_day_it_is_set(open_page):
+    """SA salió hace dos días y vuelve a salir hoy: la estrella de hoy no toca el día anterior, ni al revés."""
+    older_ms = now_ms() - 2 * STEP["1d"]
+    older = candle_day(older_ms).isoformat()
+    today = candle_day(now_ms()).isoformat()
+    hora = datetime.fromtimestamp(older_ms / 1000, timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    old_sa = {"mercado": "spot", "simbolo": "SAUSDT", "base": "SA", "quote": "USDT", "precio": 30.0, "hora": hora, "intervalo": "1d"}
+    github = GitHub()
+    page = open_page(Binance(spot={"SAUSDT": "match", "SBUSDT": "match"}, futures={}), github=github,
+                     storage={"seguimiento": {older: {"fecha": older, "monedas": [old_sa]}}})
+    scan(page)
+    page.click('#grid .card[data-key="spot:SAUSDT"]')
+    star = page.locator("#v-star .star")
+    assert star.get_attribute("aria-pressed") == "false"
+    star.click()
+    assert star.get_attribute("aria-pressed") == "true"
+    assert page.get_attribute('#grid .card[data-key="spot:SAUSDT"] .star', "aria-pressed") == "true"  # la tarjeta también
+    days = local_days(page)
+    assert starred(days, today, "SAUSDT") and not starred(days, older, "SAUSDT")
+    page.keyboard.press("Escape")
+
+    # En el seguimiento: estrella solo en el día de hoy.
+    page.click("#views button[data-view='track']")
+    page.wait_for_selector(f'[data-day="{today}"] tbody tr')
+    assert "starred" in page.locator(f'[data-day="{today}"] tr[data-key="spot:SAUSDT"]').get_attribute("class").split()
+    page.click(f'[data-day="{older}"] .day-toggle')
+    old_row = page.locator(f'[data-day="{older}"] tr[data-key="spot:SAUSDT"]')
+    assert "starred" not in (old_row.get_attribute("class") or "")
+    # Desde el gráfico del día anterior, la estrella es la de ese día.
+    old_row.click()
+    assert "null" not in page.text_content("#v-stats")
+    star = page.locator("#v-star .star")
+    assert star.get_attribute("aria-pressed") == "false"
+    star.click()
+    days = local_days(page)
+    assert starred(days, older, "SAUSDT") and starred(days, today, "SAUSDT")
+    star.click()
+    days = local_days(page)
+    assert not starred(days, older, "SAUSDT") and starred(days, today, "SAUSDT")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(5000)
+    in_github = {f: [c["simbolo"] for c in json.loads(text)["monedas"] if c.get("estrella")] for f, text in github.files.items()}
+    assert in_github[f"docs/seguimiento/{today}.json"] == ["SAUSDT"]
+    assert in_github.get(f"docs/seguimiento/{older}.json", []) == []
+    assert page.errors == []
+
+
+def test_viewer_loads_the_whole_history(open_page):
+    """El par lleva 2500 velas diarias: el visor empieza con 1000 y carga las anteriores hasta la primera."""
+    binance = Binance(spot={"OLDUSDT": "match"}, futures={}, listed={"OLDUSDT": 2500})
+    page = open_page(binance)
+    page.uncheck("#scan-track")
+    scan(page)
+    page.click('#grid .card[data-key="spot:OLDUSDT"]')
+    page.wait_for_function("() => /1000 velas desde/.test(document.getElementById('v-hist').textContent)")
+    assert "null" not in page.text_content("#v-stats")  # sin acumulación no queda un hueco con «null»
+    page.mouse.move(2, 2)  # fuera del gráfico: la leyenda es la de la última vela (+5 % de apertura a cierre)
+    page.wait_for_timeout(200)
+    assert "Var +5.00%" in page.text_content("#v-legend")
+    older = lambda: [c for c in binance.calls if c[1].endswith("/klines") and c[5]]
+    assert older() == []
+    for _ in range(8):  # alejar hasta el borde izquierdo: se piden las anteriores
+        page.keyboard.press("-")
+        page.wait_for_timeout(120)
+    for _ in range(50):
+        if older():
+            break
+        page.wait_for_timeout(100)
+    assert older(), "al llegar al borde izquierdo no se pidieron las velas anteriores"
+    page.keyboard.press("0")  # ver todo el historial
+    page.wait_for_function("() => /Todo el historial: desde el/.test(document.getElementById('v-hist').textContent)")
+    assert [c[4] for c in older()] == ["1000", "1000"]
+    first = datetime.fromtimestamp((now_ms() // STEP["1d"] - 2499) * STEP["1d"] / 1000, timezone.utc)
+    assert str(first.year) in page.text_content("#v-hist")
+    assert page.evaluate("() => document.querySelector('#v-legend').textContent.length > 0")
     assert page.errors == []
