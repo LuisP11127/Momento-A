@@ -133,6 +133,12 @@ En la pestaña **Seguimiento**:
   se piden las velas nuevas);
 - las monedas con **estrella** van primero en su día; la estrella se pone o se quita en la
   propia fila;
+- botón **Llegaron al +50%** (junto a **Por día**): una sección con las monedas de todos los días
+  cuyo máximo llegó a +50 % sobre su precio de seguimiento, con el día de cada una, cuántos días
+  tardó y la media. Arriba van las que tienen estrella y debajo el resto. No borra ni cambia nada
+  de los días: **Por día** vuelve a la vista de siempre, y la página recuerda la última elegida.
+  Para esta sección se calculan el mínimo y el máximo de las monedas de todos los días (la
+  primera vez tarda un poco más; después solo se piden las velas nuevas);
 - filtros **Todos / Spot / Futuros / No repetidas** y orden por subida, bajada, mayor máximo,
   peor mínimo, rumbo al 50 (las que llegaron antes), moneda u orden del escaneo;
 - al pulsar una moneda se abre su gráfico (1D por defecto) con una línea en el precio del

@@ -464,3 +464,68 @@ def test_viewer_loads_the_whole_history(open_page):
     assert str(first.year) in page.text_content("#v-hist")
     assert page.evaluate("() => document.querySelector('#v-legend').textContent.length > 0")
     assert page.errors == []
+
+
+def test_section_of_coins_that_reached_50_with_starred_first(open_page):
+    """Sección «Llegaron al +50%»: AAA (día 1) y CCC (día 2, con estrella) llegaron; BBB y DDD no."""
+    midnight = now_ms() // STEP["1d"] * STEP["1d"]
+    scanned = {1: midnight - 5 * STEP["1d"] + 6 * 3_600_000, 2: midnight - 4 * STEP["1d"] + 6 * 3_600_000}
+    crossed = {"AAAUSDT": midnight - 3 * STEP["1d"] + 12 * 3_600_000, "CCCUSDT": midnight - 2 * STEP["1d"] + 12 * 3_600_000}
+    fechas = {n: candle_day(ms).isoformat() for n, ms in scanned.items()}
+
+    def price(sym, t):
+        return (16.0 if t >= crossed[sym] else 10.0) if sym in crossed else 11.0
+
+    def klines(market, sym, tf, limit, start, end):
+        step = STEP[tf]
+        t = (start // step * step) if start else (now_ms() // step - limit + 1) * step
+        out = []
+        while t <= now_ms() and len(out) < limit:
+            o, c = price(sym, t), price(sym, min(t + step - 1, now_ms()))
+            out.append([t, str(o), str(max(o, c)), str(min(o, c)), str(c), "1", t + step - 1, "1", 1, "1", "1", "0"])
+            t += step
+        return out
+
+    def coin(sym, n, **extra):
+        hora = datetime.fromtimestamp(scanned[n] / 1000, timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        return dict({"mercado": "spot", "simbolo": sym, "base": sym[:-4], "quote": "USDT", "precio": 10.0, "hora": hora, "intervalo": "1d"}, **extra)
+
+    star_time = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    days = {fechas[1]: {"fecha": fechas[1], "monedas": [coin("AAAUSDT", 1), coin("BBBUSDT", 1)]},
+            fechas[2]: {"fecha": fechas[2], "monedas": [coin("CCCUSDT", 2, estrella=True, estrella_hora=star_time), coin("DDDUSDT", 2)]}}
+    binance = Binance(spot={s: "match" for s in ("AAAUSDT", "BBBUSDT", "CCCUSDT", "DDDUSDT")}, futures={}, klines=klines,
+                      price=lambda market, sym: price(sym, now_ms()))
+    page = open_page(binance, storage={"seguimiento": days}, path="#seguimiento")
+    page.wait_for_selector("#track-view button")
+    page.click("#track-view button:has-text('Llegaron al +50%')")
+    page.wait_for_function("() => /calculados/.test(document.getElementById('track-ext').textContent)", timeout=30_000)
+    page.wait_for_selector(".day.hits tbody tr[data-key]")
+
+    def hit_rows():
+        return page.eval_on_selector_all(".day.hits tbody tr", "rs => rs.map(r => r.classList.contains('group') ? r.textContent"
+                                         " : r.querySelector('.coin').firstChild.textContent + (r.classList.contains('starred') ? '★' : '')"
+                                         " + ' ' + r.querySelector('.c-day').textContent)")
+
+    rows = hit_rows()
+    assert rows[0] == "★ Con estrella · 1" and rows[1].startswith("CCC★ ") and rows[2] == "Sin estrella · 1" and rows[3].startswith("AAA ")
+    assert len(rows) == 4  # BBB y DDD no llegaron
+    assert page.text_content("#track-view button[aria-pressed='true'] .count") == "2"
+    heads = page.eval_on_selector_all(".day.hits thead th", "ths => ths.map(t => t.textContent)")
+    assert heads[:3] == ["Moneda", "Día", "Precio seguimiento"] and "Rumbo al 50" in heads
+    # Estrella desde la sección: AAA sube con las de estrella, solo en su día.
+    page.locator('.day.hits tr[data-key="spot:AAAUSDT"] .star').click()
+    assert [r.split(" ")[0] for r in hit_rows() if not r.startswith(("★", "Sin"))] in (["CCC★", "AAA★"], ["AAA★", "CCC★"])
+    stored = local_days(page)
+    assert starred(stored, fechas[1], "AAAUSDT") and starred(stored, fechas[2], "CCCUSDT")
+    # El gráfico de una moneda de la sección lleva la estrella de su día.
+    page.click('.day.hits tr[data-key="spot:CCCUSDT"]')
+    assert page.get_attribute("#v-star .star", "aria-pressed") == "true"
+    page.keyboard.press("Escape")
+    # No se borra nada: la vista por días sigue con sus dos días y sus cuatro monedas.
+    page.click("#track-view button:has-text('Por día')")
+    assert page.eval_on_selector_all("#track-days .day", "ds => ds.map(d => d.dataset.day)") == [fechas[2], fechas[1]]
+    # La vista elegida se recuerda.
+    page.click("#track-view button:has-text('Llegaron al +50%')")
+    page.reload()
+    page.wait_for_selector(".day.hits")
+    assert page.errors == []
