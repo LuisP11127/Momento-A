@@ -1,0 +1,104 @@
+{
+ "fecha": "2026-10-17",
+ "monedas": [
+  {
+   "mercado": "spot",
+   "simbolo": "PAXGUSDT",
+   "base": "PAXG",
+   "quote": "USDT",
+   "precio": 4149.49,
+   "hora": "2026-10-18T17:03:26.234Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "SUNUSDT",
+   "base": "SUN",
+   "quote": "USDT",
+   "precio": 0.01654,
+   "hora": "2026-10-18T17:03:26.234Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "XNOUSDT",
+   "base": "XNO",
+   "quote": "USDT",
+   "precio": 0.332,
+   "hora": "2026-10-18T17:03:26.234Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "KGSTUSDT",
+   "base": "KGST",
+   "quote": "USDT",
+   "precio": 0.011222,
+   "hora": "2026-10-18T17:03:26.234Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "ATUSDT",
+   "base": "AT",
+   "quote": "USDT",
+   "precio": 0.1372,
+   "hora": "2026-10-18T17:03:26.234Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "XAUTUSDT",
+   "base": "XAUT",
+   "quote": "USDT",
+   "precio": 4150.61,
+   "hora": "2026-10-18T17:03:26.234Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "SUNUSDT",
+   "base": "SUN",
+   "quote": "USDT",
+   "precio": 0.016513,
+   "hora": "2026-10-18T17:03:26.234Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "SPXUSDT",
+   "base": "SPX",
+   "quote": "USDT",
+   "precio": 0.3569,
+   "hora": "2026-10-18T17:03:26.234Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "PAXGUSDT",
+   "base": "PAXG",
+   "quote": "USDT",
+   "precio": 4148.04,
+   "hora": "2026-10-18T17:03:26.234Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "XAUTUSDT",
+   "base": "XAUT",
+   "quote": "USDT",
+   "precio": 4148.18,
+   "hora": "2026-10-18T17:03:26.234Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "BASEDUSDT",
+   "base": "BASED",
+   "quote": "USDT",
+   "precio": 0.05,
+   "hora": "2026-10-18T17:03:26.234Z",
+   "intervalo": "1d"
+  }
+ ]
+}
