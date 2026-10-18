@@ -203,6 +203,12 @@ body.tracking .scan-only { display: none !important; }
 .coins .star:hover { border-color: var(--line); }
 .coins tr.starred td:first-child { box-shadow: inset 3px 0 0 var(--ma-fast); }
 .day-stats .stars b { color: var(--ma-fast); }
+/* Sección «Llegaron al +50%»: todas las monedas que llegaron, de todos los días; las de estrella arriba. */
+.hits-title { margin: 0; font: 600 21px/1.15 var(--font-display); letter-spacing: 0.01em; }
+.coins .c-day { white-space: nowrap; }
+.coins tbody tr.group { cursor: default; }
+.coins tbody tr.group td, .coins tbody tr.group:hover td { padding: 10px 14px 6px; background: var(--sunken); font: 600 11px/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.coins tbody tr.group b { color: var(--ma-fast); font-weight: 600; }
 .coins .muted { color: var(--muted); font-size: 13px; }
 /* Rumbo al 50: la fila de una moneda cuyo máximo llegó a +50 % va en verde. */
 .coins tbody tr.hit50 { background: color-mix(in srgb, var(--up) 13%, transparent); }
@@ -215,7 +221,9 @@ body.tracking .scan-only { display: none !important; }
 .coins td small { font-size: 12px; margin-left: 6px; }
 /* En el móvil cada moneda ocupa tres líneas: moneda y variación; precio entonces y ahora; mínimo y máximo. */
 @media (max-width: 640px) {
-  .coins thead, .coins .col-scan, .chgbar { display: none; }
+  .coins thead, .coins .col-scan, .coins .c-day, .chgbar { display: none; }
+  .coins tbody tr.group { display: block; padding: 0; }
+  .coins tbody tr.group td { display: block; padding: 8px 12px 6px; }
   .coins tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "coin pct" "then now" "min max" "r50 r50"; gap: 2px 12px; padding: 9px 12px; border-bottom: 1px solid var(--grid); }
   .coins tbody tr:last-child { border-bottom: 0; }
   .coins tr.starred { box-shadow: inset 3px 0 0 var(--ma-fast); }
@@ -366,6 +374,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
 
   <section class="track" id="view-track" aria-label="Seguimiento" hidden>
     <div class="track-bar">
+      <div class="seg" id="track-view" role="group" aria-label="Vista del seguimiento"></div>
       <div class="seg" id="track-market" role="group" aria-label="Mercado"></div>
       <label>Orden
         <select id="track-sort">
@@ -1205,7 +1214,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     document.body.classList.remove("viewing");
     // Abierto desde el seguimiento: el foco vuelve a la fila de esa moneda, aunque la tabla se haya redibujado.
     const sg = (state.view[state.current] || {})._seguimiento;
-    const row = sg ? $("track-days").querySelector('[data-day="' + sg.fecha + '"] tr[data-key="' + coinKey(state.view[state.current]) + '"]') : null;
+    const row = sg ? $("track-days").querySelector('tr[data-key="' + coinKey(state.view[state.current]) + '"][data-fecha="' + sg.fecha + '"]') : null;
     if (state.trackSaved) {  // el visor se abrió desde el seguimiento: vuelve el escáner a como estaba
       Object.assign(state, state.trackSaved);
       state.trackSaved = null;
@@ -2099,7 +2108,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     if (extremesRun) return extremesRun;
     const days = allDays();
     const jobs = [];
-    days.forEach((day, i) => { if (isOpen(day.fecha, i)) for (const c of day.monedas) if (API[c.mercado]) jobs.push([day.fecha, c]); });
+    const all = track.view === "50";  // la sección +50 % mira todos los días; la vista por días, solo los abiertos
+    days.forEach((day, i) => { if (all || isOpen(day.fecha, i)) for (const c of day.monedas) if (API[c.mercado]) jobs.push([day.fecha, c]); });
     if (!jobs.length) return Promise.resolve();
     const status = $("track-ext");
     let done = 0;
@@ -2107,9 +2117,10 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     extremesRun = runPool(jobs, 4, async ([fecha, c]) => {
       try { await updateExtremes(fecha, c); } catch (err) { /* moneda sin velas (p. ej. retirada): se deja como estaba */ }
       status.textContent = "Mínimos y máximos: " + (++done) + "/" + jobs.length;
+      if (all && done % 100 === 0 && !$("view-track").hidden && track.view === "50") renderTracking();  // las que van llegando
     }).then(() => {
-      // Se guardan los de los 60 días más recientes (los de días borrados o más antiguos se recalculan si hace falta).
-      const keep = new Set(days.slice(0, 60).map((d) => d.fecha));
+      // Se guardan los de los 180 días más recientes (los de días borrados o más antiguos se recalculan si hace falta).
+      const keep = new Set(days.slice(0, 180).map((d) => d.fecha));
       for (const k of Object.keys(track.extremes)) if (!keep.has(k.split("|")[0])) delete track.extremes[k];
       store.set("seguimiento-extremos", JSON.stringify(track.extremes));
       track.extremesAt = Date.now();
@@ -2204,11 +2215,14 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     return [fmtPrice(value), h("small", { class: pct > 0 ? "up" : pct < 0 ? "down" : "", text: fmtPct(pct) })];
   }
   // Columnas: precio del seguimiento (el del escaneo), precio actual, y desde el escaneo: mínimo, máximo y variación.
-  function coinTable(day, coins) {
+  // day: el día de la tabla; sin day (sección +50 %), cada moneda lleva su día en c.fecha y hay una columna «Día».
+  // groups: separa con un título las que tienen estrella (arriba) de las demás.
+  function coinTable(day, coins, groups) {
     const table = h("table", { class: "coins" });
     table.append(h("thead", null, h("tr", null,
       h("th", { text: "Moneda" }),
-      h("th", { class: "r", text: "Precio " + shortDate(day.fecha), title: "Precio de seguimiento: el de la moneda en el escaneo" }),
+      day ? null : h("th", { text: "Día", title: "Día de seguimiento (el del escaneo)" }),
+      h("th", { class: "r", text: day ? "Precio " + shortDate(day.fecha) : "Precio seguimiento", title: "Precio de seguimiento: el de la moneda en el escaneo" }),
       h("th", { class: "r", text: "Precio actual" }),
       h("th", { class: "r", text: "Mínimo", title: "Precio más bajo desde el escaneo" }),
       h("th", { class: "r", text: "Máximo", title: "Precio más alto desde el escaneo" }),
@@ -2216,18 +2230,26 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       h("th", { class: "r", text: "Variación", title: "Precio actual frente al precio de seguimiento" }),
       h("th", { class: "col-scan", text: "Escaneo" }))));
     const body = h("tbody");
+    const columns = day ? 8 : 9;
     coins.forEach((c, i) => {
+      const fecha = c.fecha || day.fecha;
+      if (groups && (i === 0 || !c.estrella !== !coins[i - 1].estrella)) {
+        const n = coins.filter((x) => !x.estrella === !c.estrella).length;
+        body.append(h("tr", { class: "group" }, h("td", { colspan: String(columns) },
+          c.estrella ? h("b", { text: "★ Con estrella" }) : "Sin estrella", " · " + n)));
+      }
       const star = starButton(!!c.estrella, c.simbolo, () => {
-        setStar(day.fecha, c, !c.estrella);
+        setStar(fecha, c, !c.estrella);
         renderTracking();
-        const again = $("track-days").querySelector('[data-day="' + day.fecha + '"] tr[data-key="' + coinKey(c) + '"] .star');
+        const again = $("track-days").querySelector('tr[data-key="' + coinKey(c) + '"][data-fecha="' + fecha + '"] .star');
         if (again) again.focus();
       });
       const cls = [c.estrella ? "starred" : "", c.rumbo ? "hit50" : ""].filter(Boolean).join(" ") || null;
-      const tr = h("tr", { tabindex: "0", class: cls, "data-key": coinKey(c), title: "Ver el gráfico de " + c.simbolo },
+      const tr = h("tr", { tabindex: "0", class: cls, "data-key": coinKey(c), "data-fecha": fecha, title: "Ver el gráfico de " + c.simbolo },
         h("td", { class: "c-coin" }, star, h("span", { class: "coin" }, c.base || c.simbolo, h("small", { text: c.quote ? "/" + c.quote : "" })),
           h("span", { class: "badge", text: MARKET_NAMES[c.mercado] || c.mercado })),
-        h("td", { class: "r num c-then", "data-label": shortDate(day.fecha), text: fmtPrice(c.precio) }),
+        day ? null : h("td", { class: "c-day muted", text: dayTitle(fecha) }),
+        h("td", { class: "r num c-then", "data-label": shortDate(fecha), text: fmtPrice(c.precio) }),
         h("td", { class: "r num c-now", "data-label": "ahora", text: c.ahora == null ? "—" : fmtPrice(c.ahora) }),
         h("td", { class: "r num c-min", "data-label": "mín" }, ...extremeCell(c.min, c.minPct)),
         h("td", { class: "r num c-max", "data-label": "máx" }, ...extremeCell(c.max, c.maxPct)),
@@ -2265,6 +2287,46 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const card = h("article", { class: "day", "data-day": day.fecha },
       h("header", { class: "day-head" }, toggle, stats, h("div", { class: "day-actions" }, deleteControl(day.fecha))));
     if (open) card.append(coins.length ? coinTable(day, coins) : h("p", { class: "gh-note", style: "padding: 0 14px 12px", text: "Ninguna moneda con este filtro." }));
+    return card;
+  }
+  // Monedas de todos los días cuyo máximo llegó a +50 %, cada una con el día de su seguimiento (c.fecha).
+  function hitCoins() {
+    const out = [];
+    for (const day of allDays()) for (const c of withPrices(day)) if (c.rumbo) out.push(Object.assign(c, { fecha: day.fecha }));
+    return out;
+  }
+  function renderTrackView(hits) {
+    const seg = $("track-view");
+    seg.textContent = "";
+    for (const [key, label, n] of [["dias", "Por día", null], ["50", "Llegaron al +50%", hits]]) {
+      const b = h("button", { type: "button", "aria-pressed": String(key === track.view) }, label, n == null ? null : h("span", { class: "count", text: String(n) }));
+      b.addEventListener("click", () => {
+        if (track.view === key) return;
+        track.view = key;
+        store.set("seguimiento-vista", key);
+        renderTracking();
+        if (key === "50") Promise.resolve(extremesRun).then(() => refreshExtremes());  // hacen falta los de todos los días
+      });
+      seg.append(b);
+    }
+  }
+  function hitsCard(coins) {
+    const sort = track.sort === "escaneo" ? (a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : a.orden - b.orden)
+      : TRACK_SORTS[track.sort] || TRACK_SORTS.subida;
+    coins.sort((a, b) => (b.estrella ? 1 : 0) - (a.estrella ? 1 : 0) || sort(a, b));
+    const starred = coins.filter((c) => c.estrella).length;
+    const avg = coins.length ? coins.reduce((sum, c) => sum + c.rumbo.dias, 0) / coins.length : null;
+    const card = h("article", { class: "day hits" },
+      h("header", { class: "day-head" },
+        h("h2", { class: "hits-title", text: "Llegaron al +50%" }),
+        h("div", { class: "day-stats" },
+          h("span", null, h("b", { text: String(coins.length) }), coins.length === 1 ? " moneda" : " monedas"),
+          starred ? h("span", { class: "stars" }, h("b", { text: "★ " + starred }), " con estrella") : null,
+          avg == null ? null : h("span", null, "Tardaron de media ", h("b", { text: fmtNum(avg) + (avg === 1 ? " día" : " días") })),
+          h("span", { text: "de todos los días de seguimiento" }))));
+    if (coins.length) card.append(coinTable(null, coins, starred > 0 && starred < coins.length));
+    else card.append(h("p", { class: "gh-note", style: "padding: 0 14px 12px",
+      text: extremesRun ? "Calculando el mínimo y el máximo de las monedas de todos los días…" : "Todavía ninguna moneda llegó al +50 % desde su escaneo." }));
     return card;
   }
   function renderTrackMarket() {
@@ -2306,6 +2368,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const list = $("track-days");
     list.textContent = "";
     const days = allDays();
+    const hits = hitCoins();
+    renderTrackView(hits.length);
+    if (days.length && track.view === "50") { list.append(hitsCard(hits)); return; }
     if (!days.length) {
       const go = h("button", { class: "btn", type: "button", text: "Ir al escáner" });
       go.addEventListener("click", () => { location.hash = ""; });
@@ -2324,7 +2389,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     state.view = coins.map((c) => ({
       mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c.ahora == null ? c.precio : c.ahora,
       var_24h_pct: null, vela_pct: null, vs_ma7_pct: null, ma7_vs_ma25_pct: null, vs_ma99_pct: null, velas_sobre_ma7: null,
-      _seguimiento: { fecha: day.fecha, precio: c.precio, hora: c.hora, min: c.min, max: c.max, minPct: c.minPct, maxPct: c.maxPct, rumbo: c.rumbo },
+      _seguimiento: { fecha: c.fecha || day.fecha, precio: c.precio, hora: c.hora, min: c.min, max: c.max, minPct: c.minPct, maxPct: c.maxPct, rumbo: c.rumbo },
     }));
     openViewer(index);
   }
@@ -2385,6 +2450,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   $("gh-form").addEventListener("submit", connectGitHub);
   $("gh-cancel").addEventListener("click", () => showGhForm(false));
   track.sort = TRACK_SORTS[store.get("seguimiento-orden")] ? store.get("seguimiento-orden") : track.sort;
+  track.view = store.get("seguimiento-vista") === "50" ? "50" : "dias";
 
   // ---------- arranque ----------
   migrateLocalDays();
