@@ -1,0 +1,174 @@
+import json
+
+import pytest
+
+from momento_a.binance import FUTURES, SPOT, Candle, Instrument
+from momento_a.giro import (
+    DAY_MS,
+    HOUR_MS,
+    Entry,
+    SymbolData,
+    auc,
+    build_dataset,
+    daily_view,
+    evaluate,
+    features,
+    first_appearances,
+    load_entries,
+    outcomes,
+    report_markdown,
+    spearman,
+    write_outputs,
+)
+
+T0 = 1_759_276_800_000  # 2025-10-01 00:00 UTC
+
+
+def candle(open_time, step, o, c, volume=100.0, buy_share=0.5, high=None):
+    return Candle(open_time=open_time, open=o, high=high if high is not None else max(o, c) * 1.001, low=min(o, c) * 0.999,
+                  close=c, close_time=open_time + step - 1, quote_volume=volume * c, volume=volume,
+                  taker_buy_volume=volume * buy_share, trades=10)
+
+
+def series(start, step, count, price, buy_share=0.5, volume=100.0):
+    """Velas consecutivas; price(i) da el cierre de la vela i (abre en el cierre anterior)."""
+    out, prev = [], price(0)
+    for i in range(count):
+        c = price(i)
+        out.append(candle(start + i * step, step, prev, c, volume, buy_share(i) if callable(buy_share) else buy_share))
+        prev = c
+    return out
+
+
+def test_auc_and_spearman():
+    assert auc([1, 2, 3, 4], [False, False, True, True]) == 1.0
+    assert auc([4, 3, 2, 1], [False, False, True, True]) == 0.0
+    assert auc([5, 5, 5, 5], [False, True, False, True]) == 0.5
+    assert auc([1, 2], [True, True]) is None
+    assert spearman([1, 2, 3, 4], [10, 20, 30, 40]) == pytest.approx(1.0)
+    assert spearman([1, 2, 3, 4], [4, 3, 2, 1]) == pytest.approx(-1.0)
+
+
+def test_daily_view_only_uses_what_was_known_at_the_scan():
+    day0 = T0 + 30 * DAY_MS
+    daily = series(T0, DAY_MS, 31, lambda i: 100 - i)  # la última (day0) ya cerrada, con su máximo final
+    daily[-1] = candle(day0, DAY_MS, 70, 200, high=500)  # lo que pasó DESPUÉS del escaneo
+    hourly = series(day0, HOUR_MS, 10, lambda i: 70 + i)  # 10 horas del día del escaneo
+    scan = day0 + 10 * HOUR_MS + 5 * 60_000  # 10:05
+    view = daily_view(SymbolData(hourly=hourly, daily=daily), scan, price=81.0)
+    assert len(view) == 31
+    today = view[-1]
+    assert today.open == 70 and today.close == 81.0 and today.high < 100  # nada del máximo de 500 ni del cierre de 200
+    assert today.volume == pytest.approx(10 * 100)
+
+
+def make_symbol(scan_ms, buy_share=0.5, after=lambda h: 1.0, days_before=140):
+    """Datos de una moneda: precio bajando un 0,05 % por hora hasta el escaneo y, después, el precio del
+    escaneo por ``after(horas desde el escaneo)``. Las velas diarias se forman con las de 1 hora.
+    Devuelve los datos y el precio en el escaneo."""
+    origin = scan_ms // DAY_MS * DAY_MS - days_before * DAY_MS
+    n_before = (scan_ms - origin) // HOUR_MS
+    at_scan = 100 * 0.9995 ** (n_before - 1)
+    hourly = series(origin, HOUR_MS, int(n_before) + 9 * 24,
+                    lambda i: 100 * 0.9995 ** i if i < n_before else at_scan * after(i - n_before), buy_share)
+    daily = []
+    for d in range(0, len(hourly) // 24):
+        hs = hourly[d * 24:(d + 1) * 24]
+        daily.append(Candle(open_time=hs[0].open_time, open=hs[0].open, high=max(h.high for h in hs), low=min(h.low for h in hs),
+                            close=hs[-1].close, close_time=hs[-1].close_time, quote_volume=sum(h.quote_volume for h in hs),
+                            volume=sum(h.volume for h in hs), taker_buy_volume=sum(h.taker_buy_volume for h in hs)))
+    return SymbolData(hourly=hourly, daily=daily), at_scan
+
+
+def test_features_measure_buying_flow_and_outcomes_measure_what_came_after():
+    scan = T0 + 200 * DAY_MS + 12 * HOUR_MS
+    data, price = make_symbol(scan, buy_share=lambda i: 0.7, after=lambda h: 1.3 if 30 <= h < 40 else 1.0)
+    entry = Entry("2025-10-01", SPOT, "AAAUSDT", price, scan)
+    f = features(entry, data)
+    assert f["flujo_24h"] == pytest.approx(70.0)
+    assert f["cvd_7d"] == pytest.approx(0.4)
+    assert f["precio_7d"] < 0 and f["acumulacion"] == 1.0  # compras a mercado mientras el precio cae
+    assert f["brecha_ma7_ma25"] < 0 and f["dist_ma99"] < 0 and f["rsi"] is not None
+    assert f["oi_24h"] is None and f["financiacion"] is None  # sin datos de futuros
+    o = outcomes(entry, data, now_ms=scan + 30 * DAY_MS)
+    assert o["max_1d"] < 1 < o["max_3d"]  # el salto de +30 % llegó entre las horas 30 y 40
+    assert o["max_3d"] == pytest.approx((1.3 * 1.001 - 1) * 100, rel=1e-6)
+    assert outcomes(entry, data, now_ms=scan + 2 * DAY_MS)["max_3d"] is None  # todavía no han pasado 3 días
+
+
+def rows_for(signal_values, gains, days):
+    return [{"fecha": d, "mercado": SPOT, "simbolo": f"S{i}USDT", "hora_ms": i, "precio": 1.0, "estrella": False,
+             "senales": {"flujo_24h": v, "rsi": 50.0 + (i % 3)}, "resultado": {"max_7d": g, "max_3d": g}}
+            for i, (v, g, d) in enumerate(zip(signal_values, gains, days))]
+
+
+def test_evaluate_finds_the_signal_that_separates_winners():
+    days = [f"2025-10-0{1 + i % 4}" for i in range(80)]
+    values = [float(i % 20) for i in range(80)]
+    gains = [40.0 if v >= 12 else 5.0 for v in values]  # suben las de más compras a mercado
+    ev = evaluate(rows_for(values, gains, days), horizon=7, threshold=20, sample="prueba")
+    assert ev.n == 80 and ev.winners == sum(g >= 20 for g in gains)
+    top = ev.signals[0]
+    assert top["senal"] == "flujo_24h" and top["auc"] == pytest.approx(1.0)
+    assert ev.index_cv["auc"] == pytest.approx(1.0) and ev.index_cv["senales"][0][0] == "flujo_24h"
+    assert [q["acierto"] for q in ev.index_v0["quintiles"]][-1] == 100.0
+
+
+def test_load_entries_and_first_appearances(tmp_path):
+    coin = {"mercado": "spot", "simbolo": "AAAUSDT", "base": "AAA", "quote": "USDT", "intervalo": "1d"}
+    (tmp_path / "2025-10-01.json").write_text(json.dumps({"fecha": "2025-10-01", "monedas": [
+        dict(coin, precio=1.0, hora="2025-10-01T19:00:00.000Z"),
+        dict(coin, simbolo="BBBUSDT", precio=2.0, hora="2025-10-01T19:00:00.000Z", estrella=True, estrella_hora="x")]}))
+    (tmp_path / "2025-10-02.json").write_text(json.dumps({"fecha": "2025-10-02", "monedas": [
+        dict(coin, precio=0.9, hora="2025-10-02T19:00:00.000Z"), {"roto": True}]}))
+    entries = load_entries(tmp_path)
+    assert [(e.simbolo, e.fecha) for e in entries] == [("AAAUSDT", "2025-10-01"), ("BBBUSDT", "2025-10-01"), ("AAAUSDT", "2025-10-02")]
+    assert entries[1].estrella
+    assert [(e.simbolo, e.fecha) for e in first_appearances(entries)] == [("AAAUSDT", "2025-10-01"), ("BBBUSDT", "2025-10-01")]
+
+
+class FakeClient:
+    """Binance simulada: velas de make_symbol y datos de futuros para los símbolos de futuros."""
+
+    fallbacks_used = {}
+
+    def __init__(self, scans):
+        self.scans = scans  # símbolo → (hora del escaneo, sube)
+        self.calls = []
+
+    def instruments(self, market):
+        return [Instrument(FUTURES, "AAAUSDT", "AAA", "USDT")]
+
+    def candles_between(self, market, symbol, interval, start, end):
+        self.calls.append((market, symbol, interval))
+        if symbol == "BTCUSDT":
+            return series(start // HOUR_MS * HOUR_MS, HOUR_MS, (end - start) // HOUR_MS, lambda i: 60000.0)
+        scan, up = self.scans[symbol]
+        data, _ = make_symbol(scan, buy_share=0.65 if up else 0.4, after=lambda h: 1.5 if up and h > 20 else 1.0)
+        return data.hourly if interval == "1h" else data.daily
+
+    def futures_data(self, path, params):
+        self.calls.append((FUTURES, params["symbol"], path))
+        if "fundingRate" in path:
+            return [{"fundingTime": params["startTime"] + i * 8 * HOUR_MS, "fundingRate": "-0.0001"} for i in range(40)]
+        key = "sumOpenInterestValue" if "openInterest" in path else "longShortRatio"
+        return [{"timestamp": params["startTime"] + i * HOUR_MS, key: str(1000 + i)} for i in range(0, 499)]
+
+
+def test_build_dataset_and_report(tmp_path):
+    scan = T0 + 200 * DAY_MS + 12 * HOUR_MS
+    scans = {"AAAUSDT": (scan, True), "BBBUSDT": (scan, False)}
+    client = FakeClient(scans)
+    price = make_symbol(scan)[1]
+    entries = [Entry("2025-10-19", SPOT, s, price, t) for s, (t, _) in scans.items()]
+    data = build_dataset(entries, client, now_ms=scan + 20 * DAY_MS, log=lambda m: None)
+    assert [r["simbolo"] for r in data.rows] == ["AAAUSDT", "BBBUSDT"] and not data.errors
+    a, b = data.rows
+    assert a["senales"]["financiacion"] == pytest.approx(-0.01) and a["senales"]["oi_24h"] is not None
+    assert b["senales"]["financiacion"] is None  # BBB no tiene futuros
+    assert a["senales"]["flujo_24h"] > b["senales"]["flujo_24h"] and a["resultado"]["max_7d"] > 20 > b["resultado"]["max_7d"]
+    assert ("futures", "BBBUSDT", "/futures/data/openInterestHist") not in client.calls
+    md = report_markdown(data, [], len(entries), "hoy")
+    assert md.startswith("# Índice de giro") and "2 entradas de seguimiento" in md
+    write_outputs(tmp_path, data, [], md)
+    assert (tmp_path / "informe.md").exists() and "flujo_24h" in (tmp_path / "datos.csv").read_text().splitlines()[0]
