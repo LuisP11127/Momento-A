@@ -1,0 +1,122 @@
+{
+ "fecha": "2026-10-18",
+ "monedas": [
+  {
+   "mercado": "spot",
+   "simbolo": "SUNUSDT",
+   "base": "SUN",
+   "quote": "USDT",
+   "precio": 0.01653,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "PAXGUSDT",
+   "base": "PAXG",
+   "quote": "USDT",
+   "precio": 4142.27,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "ATMUSDT",
+   "base": "ATM",
+   "quote": "USDT",
+   "precio": 0.996,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "XNOUSDT",
+   "base": "XNO",
+   "quote": "USDT",
+   "precio": 0.328,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "KGSTUSDT",
+   "base": "KGST",
+   "quote": "USDT",
+   "precio": 0.011213,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "GENIUSUSDT",
+   "base": "GENIUS",
+   "quote": "USDT",
+   "precio": 0.3005,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "XAUTUSDT",
+   "base": "XAUT",
+   "quote": "USDT",
+   "precio": 4140.07,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "SUNUSDT",
+   "base": "SUN",
+   "quote": "USDT",
+   "precio": 0.016514,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "AVAAIUSDT",
+   "base": "AVAAI",
+   "quote": "USDT",
+   "precio": 0.007317,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "PAXGUSDT",
+   "base": "PAXG",
+   "quote": "USDT",
+   "precio": 4140.36,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "HUSDT",
+   "base": "H",
+   "quote": "USDT",
+   "precio": 0.05657,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "XAUTUSDT",
+   "base": "XAUT",
+   "quote": "USDT",
+   "precio": 4138.68,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "BASEDUSDT",
+   "base": "BASED",
+   "quote": "USDT",
+   "precio": 0.04804,
+   "hora": "2026-10-19T15:58:01.928Z",
+   "intervalo": "1d"
+  }
+ ]
+}
