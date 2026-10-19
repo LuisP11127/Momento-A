@@ -135,7 +135,9 @@ En la pestaña **Seguimiento**:
   propia fila;
 - botón **Llegaron al +50%** (junto a **Por día**): una sección con las monedas de todos los días
   cuyo máximo llegó a +50 % sobre su precio de seguimiento, con el día de cada una, cuántos días
-  tardó y la media. Arriba van las que tienen estrella y debajo el resto. No borra ni cambia nada
+  tardó y la media. Cada moneda sale **una vez, en su día más antiguo**; si le pusiste estrella
+  en otro día, ese día también sale, aunque se repita. Arriba van las que tienen estrella y
+  debajo el resto. No borra ni cambia nada
   de los días: **Por día** vuelve a la vista de siempre, y la página recuerda la última elegida.
   Para esta sección se calculan el mínimo y el máximo de las monedas de todos los días (la
   primera vez tarda un poco más; después solo se piden las velas nuevas);

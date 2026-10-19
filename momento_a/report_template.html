@@ -2295,6 +2295,14 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     for (const day of allDays()) for (const c of withPrices(day)) if (c.rumbo) out.push(Object.assign(c, { fecha: day.fecha }));
     return out;
   }
+  // En la sección +50 %, cada moneda una sola vez, la de su día más antiguo; además, los días en que tiene
+  // estrella, aunque se repita. Con «No repetidas», spot y futuros de una moneda cuentan como la misma.
+  function oldestHits(hits) {
+    const key = (c) => (track.market === "unicas" ? coinOf(c) : coinKey(c));
+    const oldest = new Map();
+    for (const c of hits) { const prev = oldest.get(key(c)); if (!prev || c.fecha < prev.fecha) oldest.set(key(c), c); }
+    return hits.filter((c) => c.estrella || oldest.get(key(c)) === c);
+  }
   function renderTrackView(hits) {
     const seg = $("track-view");
     seg.textContent = "";
@@ -2323,7 +2331,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
           h("span", null, h("b", { text: String(coins.length) }), coins.length === 1 ? " moneda" : " monedas"),
           starred ? h("span", { class: "stars" }, h("b", { text: "★ " + starred }), " con estrella") : null,
           avg == null ? null : h("span", null, "Tardaron de media ", h("b", { text: fmtNum(avg) + (avg === 1 ? " día" : " días") })),
-          h("span", { text: "de todos los días de seguimiento" }))));
+          h("span", { text: "cada moneda en su día más antiguo, y en los días en que tiene estrella" }))));
     if (coins.length) card.append(coinTable(null, coins, starred > 0 && starred < coins.length));
     else card.append(h("p", { class: "gh-note", style: "padding: 0 14px 12px",
       text: extremesRun ? "Calculando el mínimo y el máximo de las monedas de todos los días…" : "Todavía ninguna moneda llegó al +50 % desde su escaneo." }));
@@ -2368,7 +2376,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const list = $("track-days");
     list.textContent = "";
     const days = allDays();
-    const hits = hitCoins();
+    const hits = oldestHits(hitCoins());
     renderTrackView(hits.length);
     if (days.length && track.view === "50") { list.append(hitsCard(hits)); return; }
     if (!days.length) {
