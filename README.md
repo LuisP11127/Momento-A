@@ -237,8 +237,24 @@ Cada señal por separado funcionó, pero juntas aún no se pudieron comprobar: e
 elegirlas (desde el 12 de octubre de 2026), y con el índice que guardó la web. El informe dice
 cuántas monedas faltan hasta poder medirlo.
 
-El libro de órdenes no tiene historial en Binance: para estudiarlo hay que guardarlo en cada
-escaneo a partir de ahora.
+### Libro de órdenes (se guarda para probarlo)
+
+Binance no guarda el historial del libro de órdenes, así que no se puede probar con los escaneos
+pasados. Desde ahora, cada escaneo con **Guardar en seguimiento** guarda con cada moneda que cumple
+los filtros una foto del libro (spot o futuros, según la moneda):
+
+- USDT en órdenes de compra y de venta a ±1, 2 y 5 % del precio medio (`compras_1`, `ventas_1`…);
+  una banda solo se guarda si el libro descargado llega hasta su borde;
+- el spread;
+- la orden más grande de cada lado a menos del 5 % y a qué distancia está (`muro_compra`,
+  `muro_venta`).
+
+No cuenta en el índice ni se ve en la página. El workflow **Indicador** lo convierte en señales
+(qué parte de las órdenes son de compra, qué muro es mayor, el spread y cuánto hay en el libro
+frente al volumen de 24 h) y las prueba como las demás cuando hay al menos 15 monedas con resultado;
+el informe dice desde cuándo y en cuántas monedas se ha guardado. Si alguna señal funciona, entrará
+en un índice v2. Es una sola foto en el momento del escaneo y los muros grandes a veces se retiran
+antes de ejecutarse, así que puede que no sirva: para saberlo se guarda.
 
 ## Línea de comandos
 
@@ -328,7 +344,7 @@ Además de las del scanner en Python, `tests/test_web_browser.py` abre la web en
 Binance y GitHub simulados y comprueba el escaneo (peticiones que no responden, errores y
 pausas de Binance), el guardado en GitHub tras escanear, las estrellas, las columnas del
 seguimiento, «Rumbo al 50», el filtro de acumulación, el índice de giro (que da lo mismo que
-`giro.py` con las mismas velas) y la vista en el móvil. El workflow
+`giro.py` con las mismas velas), el resumen del libro de órdenes y la vista en el móvil. El workflow
 **Scanner** las pasa en cada cambio. Sin Playwright instalado se omiten.
 
 > Esto es una herramienta de filtrado, no una recomendación de inversión.

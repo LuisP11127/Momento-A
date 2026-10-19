@@ -10,8 +10,8 @@ escaneo (sin mirar lo que pasó después), señales de cuatro tipos:
 - futuros: interés abierto, financiación y ratio long/short (Binance guarda unos 30 días).
 
 Después se mide qué pasó (máximo a 1, 3 y 7 días) y se comprueba qué señales separan las monedas
-que subieron de las que no. El libro de órdenes no tiene historial: se empezará a guardar en los
-escaneos (fase 2).
+que subieron de las que no. El libro de órdenes no tiene historial en Binance: desde la fase 2 la web
+guarda un resumen en cada escaneo, y sus señales entran en la prueba a medida que hay resultados.
 
 El índice v1 (INDEX_V1) junta las cuatro señales que se sostuvieron en esta prueba; la web lo calcula
 igual en cada escaneo con velas 1D y lo guarda en el seguimiento. Cada semana se vuelve a medir, sobre
@@ -103,6 +103,13 @@ LABELS = {
     "long_short_3d": "Ratio long/short: cambio 3 días",
     "btc_7d": "BTC 7 días (%)",
     "fuerza_vs_btc": "Moneda frente a BTC, 7 días (%)",
+    # Libro de órdenes, del resumen que guardó la web al escanear.
+    "libro_1": "Libro: compras a ±1 % (% del total)",
+    "libro_2": "Libro: compras a ±2 % (% del total)",
+    "libro_5": "Libro: compras a ±5 % (% del total)",
+    "libro_muros": "Libro: muro de compra frente al de venta (%)",
+    "libro_spread": "Libro: spread (%)",
+    "libro_profundidad": "Libro: órdenes a ±2 % / volumen de 24 h (%)",
 }
 
 
@@ -118,6 +125,7 @@ class Entry:
     hora_ms: int
     estrella: bool = False
     giro: Optional[dict] = field(default=None, compare=False)  # índice de giro que guardó la web al escanear
+    libro: Optional[dict] = field(default=None, compare=False)  # resumen del libro de órdenes al escanear
 
 
 @dataclass
@@ -147,7 +155,8 @@ def load_entries(folder: Path) -> list[Entry]:
             try:
                 entries.append(Entry(data.get("fecha") or path.stem, c["mercado"], c["simbolo"], float(c["precio"]),
                                      parse_iso_ms(c["hora"]), bool(c.get("estrella")),
-                                     c["giro"] if isinstance(c.get("giro"), dict) else None))
+                                     c["giro"] if isinstance(c.get("giro"), dict) else None,
+                                     c["libro"] if isinstance(c.get("libro"), dict) else None))
             except (KeyError, TypeError, ValueError):
                 continue
     return sorted(entries, key=lambda e: e.hora_ms)
@@ -295,6 +304,32 @@ def features(entry: Entry, data: SymbolData, btc_hourly: Sequence[Candle] = ()) 
     f["btc_7d"] = pct(btc[-1].close, btc[0].open) if len(btc) >= 7 * 20 else None
     f["fuerza_vs_btc"] = None if f["btc_7d"] is None or f["precio_7d"] is None else f["precio_7d"] - f["btc_7d"]
     return f
+
+
+def volume_24h(data: SymbolData, t_ms: int) -> Optional[float]:
+    """Volumen en USDT de las 24 horas anteriores a t (velas de 1 hora cerradas)."""
+    hours = [c for c in data.hourly if c.open_time >= t_ms - DAY_MS and c.close_time < t_ms]
+    return sum(c.quote_volume for c in hours) if len(hours) >= 20 else None
+
+
+def book_signals(book: Optional[dict], volume: Optional[float] = None) -> dict[str, Optional[float]]:
+    """Señales del resumen del libro de órdenes que guardó la web (None si no lo hay)."""
+    b = book or {}
+
+    def number(key: str) -> Optional[float]:
+        v = b.get(key)
+        return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+    def share(buy: Optional[float], sell: Optional[float]) -> Optional[float]:
+        return None if buy is None or sell is None or buy + sell <= 0 else buy / (buy + sell) * 100
+
+    near = None if number("compras_2") is None or number("ventas_2") is None else number("compras_2") + number("ventas_2")
+    return {
+        **{f"libro_{p}": share(number(f"compras_{p}"), number(f"ventas_{p}")) for p in (1, 2, 5)},
+        "libro_muros": share(number("muro_compra"), number("muro_venta")),
+        "libro_spread": number("spread"),
+        "libro_profundidad": near / volume * 100 if near is not None and volume else None,
+    }
 
 
 def outcomes(entry: Entry, data: SymbolData, now_ms: int, horizons: Iterable[int] = (1, 3, 7),
@@ -609,6 +644,7 @@ def build_dataset(entries: Sequence[Entry], client: BinanceClient, now_ms: int, 
                 continue
             for e in by_symbol[key]:
                 signals = features(e, data, btc)
+                signals.update(book_signals(e.libro, volume_24h(data, e.hora_ms)))
                 saved = e.giro or {}
                 # Binance solo guarda 30 días de ratio long/short: el que guardó la web al escanear lo conserva.
                 if signals["long_short"] is None and isinstance(saved.get("long_short"), (int, float)):
@@ -653,6 +689,13 @@ def report_markdown(dataset: Dataset, evaluations: Sequence[Evaluation], entries
         "no un giro al alza.",
         "",
     ]
+    booked = [r for r in rows if r["senales"].get("libro_spread") is not None]
+    if booked:
+        lines += [f"**Libro de órdenes**: guardado en {len(booked)} {'entrada' if len(booked) == 1 else 'entradas'} "
+                  f"({len({(r['mercado'], r['simbolo']) for r in booked})} monedas) desde el {min(r['fecha'] for r in booked)}. "
+                  "Sus señales («Libro: …») salen en las tablas cuando hay al menos 15 monedas con resultado.", ""]
+    else:
+        lines += ["**Libro de órdenes**: todavía no hay escaneos que lo hayan guardado.", ""]
     for ev in evaluations:
         base = ev.winners / ev.n * 100
         title = (f"Sube +{ev.threshold:g} % antes de caer −{ev.threshold / 2:g} % en {ev.horizon} días" if ev.mode == "antes"

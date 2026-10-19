@@ -47,6 +47,18 @@ def test_collect_tracking_keeps_the_giro_index(tmp_path):
     assert "giro" not in b and "giro" not in c
 
 
+def test_collect_tracking_keeps_the_order_book(tmp_path):
+    base = {"mercado": "spot", "base": "AAA", "quote": "USDT", "precio": 2.0, "hora": "2026-10-19T18:15:34.833Z", "intervalo": "1d"}
+    book = {"v": 1, "spread": 0.1998, "compras_1": 2990, "ventas_1": 6052, "muro_compra": 9600, "muro_compra_dist": -4.096}
+    write(tmp_path / "2026-10-19.json", {"fecha": "2026-10-19", "monedas": [
+        dict(base, simbolo="AAAUSDT", libro=dict(book, otro=1, ventas_5=None)),
+        dict(base, simbolo="BBBUSDT", libro={"compras_1": 5}),  # sin spread: no es un resumen del libro
+        dict(base, simbolo="CCCUSDT", libro="roto")]})
+    a, b, c = collect_tracking(tmp_path)[0]["monedas"]
+    assert a["libro"] == book
+    assert "libro" not in b and "libro" not in c
+
+
 def test_main_writes_app_and_tracking(tmp_path, capsys):
     folder = tmp_path / "seguimiento"
     folder.mkdir()

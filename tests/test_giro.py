@@ -12,6 +12,7 @@ from momento_a.giro import (
     Entry,
     SymbolData,
     auc,
+    book_signals,
     build_dataset,
     daily_view,
     evaluate,
@@ -157,6 +158,18 @@ def test_index_v1_is_measured_on_new_days_and_as_saved_by_the_web():
     assert "Todavía 0 monedas con resultado" in md
 
 
+def test_book_signals_from_the_summary_saved_by_the_web():
+    book = {"v": 1, "spread": 0.12, "compras_1": 300, "ventas_1": 100, "compras_2": 600, "ventas_2": 400,
+            "ventas_5": 900, "muro_compra": 50, "muro_compra_dist": -1.2, "muro_venta": 150, "muro_venta_dist": 2.5}
+    s = book_signals(book, volume=10_000)
+    assert s["libro_1"] == pytest.approx(75.0) and s["libro_2"] == pytest.approx(60.0)
+    assert s["libro_5"] is None  # el libro descargado no llegaba al −5 %: no se guardó
+    assert s["libro_muros"] == pytest.approx(25.0) and s["libro_spread"] == 0.12
+    assert s["libro_profundidad"] == pytest.approx(10.0)  # 1000 USDT a ±2 % sobre 10 000 de volumen
+    assert book_signals(book)["libro_profundidad"] is None
+    assert set(book_signals(None).values()) == {None}
+
+
 def test_index_scores_rank_each_coin_within_its_day():
     rows = [{"fecha": "d", "senales": {"minimo_mas_alto": 5.0, "flujo_tendencia": -1.0, "long_short": 2.0, "acumulacion": 1.0}},
             {"fecha": "d", "senales": {"minimo_mas_alto": 1.0, "flujo_tendencia": 3.0, "long_short": None, "acumulacion": 0.0}},
@@ -174,12 +187,13 @@ def test_load_entries_and_first_appearances(tmp_path):
     (tmp_path / "2025-10-01.json").write_text(json.dumps({"fecha": "2025-10-01", "monedas": [
         dict(coin, precio=1.0, hora="2025-10-01T19:00:00.000Z"),
         dict(coin, simbolo="BBBUSDT", precio=2.0, hora="2025-10-01T19:00:00.000Z", estrella=True, estrella_hora="x",
-             giro={"v": 1, "indice": 72, "long_short": 2.1})]}))
+             giro={"v": 1, "indice": 72, "long_short": 2.1}, libro={"v": 1, "spread": 0.2})]}))
     (tmp_path / "2025-10-02.json").write_text(json.dumps({"fecha": "2025-10-02", "monedas": [
         dict(coin, precio=0.9, hora="2025-10-02T19:00:00.000Z"), {"roto": True}]}))
     entries = load_entries(tmp_path)
     assert [(e.simbolo, e.fecha) for e in entries] == [("AAAUSDT", "2025-10-01"), ("BBBUSDT", "2025-10-01"), ("AAAUSDT", "2025-10-02")]
     assert entries[1].estrella and entries[1].giro["indice"] == 72 and entries[0].giro is None
+    assert entries[1].libro == {"v": 1, "spread": 0.2} and entries[0].libro is None
     assert [(e.simbolo, e.fecha) for e in first_appearances(entries)] == [("AAAUSDT", "2025-10-01"), ("BBBUSDT", "2025-10-01")]
 
 
@@ -217,7 +231,8 @@ def test_build_dataset_and_report(tmp_path):
     client = FakeClient(scans)
     price = make_symbol(scan)[1]
     saved = {"v": 1, "indice": 64, "long_short": 1.9}  # lo que guardó la web al escanear
-    entries = [Entry("2025-10-19", SPOT, s, price, t, giro=saved) for s, (t, _) in scans.items()]
+    book = {"v": 1, "spread": 0.1, "compras_2": 3000, "ventas_2": 1000}
+    entries = [Entry("2025-10-19", SPOT, s, price, t, giro=saved, libro=book if s == "AAAUSDT" else None) for s, (t, _) in scans.items()]
     data = build_dataset(entries, client, now_ms=scan + 20 * DAY_MS, log=lambda m: None)
     assert [r["simbolo"] for r in data.rows] == ["AAAUSDT", "BBBUSDT"] and not data.errors
     a, b = data.rows
@@ -226,10 +241,13 @@ def test_build_dataset_and_report(tmp_path):
     # Binance da el ratio long/short de AAA; el de BBB ya no está en Binance y se usa el que guardó la web.
     assert a["senales"]["long_short"] > 1000 and b["senales"]["long_short"] == pytest.approx(1.9)
     assert a["giro_web"] == b["giro_web"] == 64.0 and a["giro_v1"] > b["giro_v1"]
+    assert a["senales"]["libro_2"] == pytest.approx(75.0) and a["senales"]["libro_profundidad"] > 0
+    assert b["senales"]["libro_2"] is None
     assert a["senales"]["flujo_24h"] > b["senales"]["flujo_24h"] and a["resultado"]["max_7d"] > 20 > b["resultado"]["max_7d"]
     assert ("futures", "BBBUSDT", "/futures/data/openInterestHist") not in client.calls
     md = report_markdown(data, [], len(entries), "hoy")
     assert md.startswith("# Índice de giro") and "2 entradas de seguimiento" in md
+    assert "**Libro de órdenes**: guardado en 1 entrada (1 monedas) desde el 2025-10-19." in md
     write_outputs(tmp_path, data, [], md)
     header = (tmp_path / "datos.csv").read_text().splitlines()[0]
     assert (tmp_path / "informe.md").exists() and "flujo_24h" in header and "giro_v1" in header

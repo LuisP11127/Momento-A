@@ -875,7 +875,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const tracked = trackedCoin(fecha, it);
     const on = !(tracked && tracked.estrella);
     setStar(fecha, tracked || { mercado: it.mercado, simbolo: it.simbolo, base: it.base, quote: it.quote, precio: it._precio ?? it.precio,
-      hora: state.data.generado, intervalo: it.intervalo || state.data.intervalo, giro: it.giro }, on);
+      hora: state.data.generado, intervalo: it.intervalo || state.data.intervalo, giro: it.giro, libro: it.libro }, on);
     paintStar(button, on, it.simbolo);
   }
   function card(it, index, starred) {
@@ -1304,10 +1304,10 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   const API = {
     spot: { nombre: "Spot", bases: ["https://api.binance.com", "https://data-api.binance.vision"], info: "/api/v3/exchangeInfo",
       klines: "/api/v3/klines", ticker: "/api/v3/ticker/24hr", price: "/api/v3/ticker/price", limit: 6000,
-      infoW: 20, tickerW: 80, priceW: 4, klinesW: () => 2 },
+      infoW: 20, tickerW: 80, priceW: 4, klinesW: () => 2, depth: "/api/v3/depth", depthLimit: 1000, depthW: 50 },
     futures: { nombre: "Futures USDⓈ-M", bases: ["https://fapi.binance.com"], info: "/fapi/v1/exchangeInfo",
       klines: "/fapi/v1/klines", ticker: "/fapi/v1/ticker/24hr", price: "/fapi/v1/ticker/price", limit: 2400,
-      infoW: 1, tickerW: 40, priceW: 2,
+      infoW: 1, tickerW: 40, priceW: 2, depth: "/fapi/v1/depth", depthLimit: 500, depthW: 10,
       klinesW: (n) => (n < 100 ? 1 : n < 500 ? 2 : n <= 1000 ? 5 : 10) },
   };
   class ScanError extends Error {
@@ -1706,6 +1706,51 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     if (!tag) return [];
     return [tag, h("span", { class: "giro-detail" }, ...giroParts(g).flatMap(([name, value], i) => [i ? " · " : "", name + " ", h("b", { text: value })]))];
   }
+  // ---------- libro de órdenes (fase 2) ----------
+  // Se guarda en el seguimiento para probar con el workflow Indicador si anuncia giros; todavía no cuenta en el
+  // índice ni se muestra. Una foto del libro al escanear: USDT en órdenes de compra y de venta a ±1, 2 y 5 % del
+  // precio medio, el spread y la orden más grande de cada lado a menos del 5 %. Una banda solo se guarda si el
+  // libro descargado llega hasta su borde (o es el libro entero): si no, faltarían órdenes.
+  function bookSummary(book, limit) {
+    const side = (levels) => (Array.isArray(levels) ? levels : []).map(([p, q]) => [+p, +q]).filter(([p, q]) => p > 0 && q >= 0);
+    const bids = side(book && book.bids), asks = side(book && book.asks);
+    if (!bids.length || !asks.length) return null;
+    const mid = (bids[0][0] + asks[0][0]) / 2;
+    const out = { v: 1, spread: +((asks[0][0] - bids[0][0]) / mid * 100).toFixed(4) };
+    const inside = (levels, edge, buy) => levels.filter(([p]) => (buy ? p >= edge : p <= edge));
+    const reaches = (levels, edge, buy) => levels.length < limit || (buy ? levels[levels.length - 1][0] <= edge : levels[levels.length - 1][0] >= edge);
+    for (const pct of [1, 2, 5]) {
+      for (const [name, levels, buy] of [["compras_", bids, true], ["ventas_", asks, false]]) {
+        const edge = mid * (1 + (buy ? -pct : pct) / 100);
+        if (reaches(levels, edge, buy)) out[name + pct] = Math.round(inside(levels, edge, buy).reduce((sum, [p, q]) => sum + p * q, 0));
+      }
+    }
+    for (const [name, levels, buy] of [["muro_compra", bids, true], ["muro_venta", asks, false]]) {
+      const near = inside(levels, mid * (1 + (buy ? -5 : 5) / 100), buy);
+      if (!near.length) continue;
+      const [p, q] = near.reduce((best, l) => (l[0] * l[1] > best[0] * best[1] ? l : best));
+      out[name] = Math.round(p * q);
+      out[name + "_dist"] = +((p - mid) / mid * 100).toFixed(3);
+    }
+    return out;
+  }
+  async function bookOf(key, api, symbol) {
+    const cfg = API[key];
+    try {
+      return bookSummary(await api.get(cfg.depth, { symbol, limit: cfg.depthLimit }, cfg.depthW), cfg.depthLimit);
+    } catch (err) {
+      if (err.fatal) throw err;
+      return null;
+    }
+  }
+  const BOOK_FIELDS = ["v", "spread", "compras_1", "ventas_1", "compras_2", "ventas_2", "compras_5", "ventas_5",
+    "muro_compra", "muro_compra_dist", "muro_venta", "muro_venta_dist"];
+  function cleanBook(b) {
+    if (!b || typeof b !== "object" || !isNum(b.spread)) return null;
+    const out = {};
+    for (const n of BOOK_FIELDS) if (isNum(b[n])) out[n] = b[n];
+    return out;
+  }
   const isStockTags = (tags) => (tags || []).some((t) => typeof t === "string" && t.toLowerCase().includes("stock"));
   // Lista de acciones tokenizadas (bStocks), una vez por hora como mucho: 1) la copia publicada junto a la web
   // (bstocks.json, el workflow Web la renueva cada día); 2) la lista de productos de Binance, que su web no
@@ -1798,8 +1843,10 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
 
     // 2) Gráfico completo en la temporalidad del escaneo para las que cumplen los filtros ahora. Las demás
     // temporalidades (y las monedas que entren al cambiar los filtros) se piden al mostrarse cada tarjeta.
-    // Con velas 1D, también las señales del índice de giro de esas monedas.
-    const crit = criteria(), now = Date.now(), giroOn = opts.interval === "1d";
+    // Con velas 1D, también las señales del índice de giro de esas monedas; si se guardan en el seguimiento, su libro de órdenes.
+    const crit = criteria(), now = Date.now(), giroOn = opts.interval === "1d", bookOn = !!opts.track;
+    const extras = ["gráficos", giroOn ? "índice de giro" : null, bookOn ? "libro de órdenes" : null].filter(Boolean);
+    const doing = extras.slice(0, -1).join(", ") + (extras.length > 1 ? " y " : "") + extras[extras.length - 1];
     const matches = found.filter((m) => evaluateItem({ velas: m.rows, intervalo: opts.interval, volumen_24h: m.c.volume }, crit, now));
     let charted = 0;
     try {
@@ -1809,8 +1856,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
             .catch((err) => { if (err.fatal) throw err; return []; });
           if (rows.length) m.chart = rows.map(row);
           if (giroOn) m.giro = await giroSignals(key, api, m.c.info.symbol, m.rows, signal);
+          if (bookOn) m.libro = await bookOf(key, api, m.c.info.symbol);
         } finally {
-          report(cfg.nombre + ": gráficos " + (giroOn ? "e índice de giro " : "") + (++charted) + "/" + matches.length);
+          report(cfg.nombre + ": " + doing + " " + (++charted) + "/" + matches.length);
         }
       });
     } catch (err) {
@@ -1818,11 +1866,11 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       notes.push("faltan gráficos (" + err.message + "); se piden al verlos");
     }
 
-    const coincidencias = found.map(({ c, rows, chart, giro }) => Object.assign({
+    const coincidencias = found.map(({ c, rows, chart, giro, libro }) => Object.assign({
       mercado: key, intervalo: opts.interval, simbolo: c.info.symbol, base: c.info.baseAsset, quote: c.info.quoteAsset,
       precio: rows[rows.length - 1][4], var_24h_pct: c.change, volumen_24h: c.volume,
       velas: chart || rows, graficos: {}, fresco: !!chart,
-    }, giro ? { giro } : null));
+    }, giro ? { giro } : null, libro ? { libro } : null));
     return { market: { nombre: cfg.nombre, quote: opts.quote, analizadas: analyzed, coincidencias }, notes };
   }
   let scanController = null;
@@ -1981,8 +2029,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   }
   function cleanCoin(c) {
     const out = { mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c.precio, hora: c.hora, intervalo: c.intervalo };
-    const giro = cleanGiro(c.giro);
+    const giro = cleanGiro(c.giro), libro = cleanBook(c.libro);
     if (giro) out.giro = giro;
+    if (libro) out.libro = libro;
     if (c.estrella_hora) Object.assign(out, { estrella: !!c.estrella, estrella_hora: c.estrella_hora });
     return out;
   }
@@ -2021,7 +2070,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   function recordScan(items, interval, hora) {
     const fecha = candleDayOf(hora, todayKey());
     const monedas = items.map((c) => cleanCoin({ mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c._precio ?? c.precio,
-      hora, intervalo: interval, giro: c.giro }));
+      hora, intervalo: interval, giro: c.giro, libro: c.libro }));
     if (!monedas.length) return null;
     const days = localDays();
     days[fecha] = Object.assign(mergeDay(days[fecha], { fecha, monedas }), { pendiente: true });

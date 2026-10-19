@@ -77,13 +77,15 @@ def trend_klines(kind: str, tf: str, limit: int, end: int | None = None, listed:
 class Binance:
     """Mercados simulados. kinds: símbolo → tipo de velas; fail: símbolo → fallo («hang» la primera vez,
     «500» la primera vez, «429» la primera vez, «dead» siempre 500); long_short: símbolo de futuros → ratio
-    long/short de cuentas (los demás, como en Binance, 400)."""
+    long/short de cuentas (los demás, como en Binance, 400); books: símbolo → libro de órdenes (por defecto,
+    uno pequeño)."""
 
     def __init__(self, spot: dict, futures: dict, fail: dict | None = None, klines=None, price=None, listed=None,
-                 long_short=None):
+                 long_short=None, books=None):
         self.kinds = {"spot": spot, "futures": futures}
         self.fail = fail or {}
         self.long_short = long_short or {}
+        self.books = books or {}
         self.listed = listed or {}
         self.klines = klines or (lambda market, sym, tf, limit, start, end: trend_klines(
             self.kinds[market].get(sym, "up"), tf, limit, end, self.listed.get(sym)))
@@ -120,6 +122,8 @@ class Binance:
             start = int(q["startTime"]) if "startTime" in q else None
             end = int(q["endTime"]) if "endTime" in q else None
             body = self.klines(market, sym, q["interval"], min(int(q["limit"]), 1000), start, end)
+        elif url.path.endswith("/depth"):
+            body = self.books.get(sym) or {"bids": [["9.9", "10"], ["9.8", "20"]], "asks": [["10.1", "10"], ["10.2", "5"]]}
         elif url.path.endswith("/globalLongShortAccountRatio") and market == "futures":
             if sym not in self.long_short:
                 return route.fulfill(status=400, body='{"code": -1121, "msg": "Invalid symbol."}', headers=CORS)
@@ -257,6 +261,7 @@ def test_scan_survives_hanging_failing_and_limited_requests(open_page):
     scan(page)
     assert sorted(cards(page)) == ["FA", "FLAKY", "HANG", "LIMIT", "SA"]  # sin STOCK (bStocks) ni las alcistas
     assert "1 par no respondió" in page.text_content("#notice")
+    assert not [c for c in binance.calls if c[1].endswith("/depth")]  # sin «Guardar en seguimiento», sin libro de órdenes
     # Durante el escaneo solo se baja el gráfico completo de su temporalidad; el resto, al ver cada tarjeta.
     charts = {c[3] for c in binance.calls if c[1].endswith("/klines") and c[4] == "299"}
     assert "1d" in charts
@@ -636,4 +641,31 @@ def test_no_giro_index_with_other_candles(open_page):
     assert sorted(cards(page)) == ["FA", "SA"] and page.locator("#grid .giro").count() == 0
     assert not [c for c in binance.calls if c[3] == "1h" or c[1].endswith("/globalLongShortAccountRatio")]
     assert all("giro" not in c for day in local_days(page).values() for c in day["monedas"])
+    assert page.errors == []
+
+
+def test_order_book_summary_is_saved_with_each_coin(open_page):
+    """En cada escaneo que se guarda, un resumen del libro de órdenes de cada moneda: USDT en compras y ventas a ±1, 2
+    y 5 % del precio medio, spread y la orden más grande de cada lado. En FA el libro descargado (500 niveles, el
+    máximo que se pide en futuros) no llega al −2 %: esas bandas no se guardan."""
+    sa = {"bids": [["100", "10"], ["99.5", "20"], ["98.5", "6"], ["96", "100"], ["90", "1000"]],
+          "asks": [["100.2", "10"], ["101", "50"], ["101.5", "2"], ["104", "10"], ["120", "500"]]}
+    fa = {"bids": [[f"{100 - i * 0.003:.3f}", "1"] for i in range(500)], "asks": [["100.01", "1"], ["101", "1"]]}
+    binance = Binance(spot={"SAUSDT": "match"}, futures={"FAUSDT": "match"}, books={"SAUSDT": sa, "FAUSDT": fa})
+    page = open_page(binance)
+    scan(page)
+    assert {(c[0], c[2], c[4]) for c in binance.calls if c[1].endswith("/depth")} == {("spot", "SAUSDT", "1000"), ("futures", "FAUSDT", "500")}
+    coins = {c["simbolo"]: c for day in local_days(page).values() for c in day["monedas"]}
+    # Precio medio 100,1: ±1 % es de 99,099 a 101,101; ±2 %, de 98,098 a 102,102; ±5 %, de 95,095 a 105,105.
+    assert coins["SAUSDT"]["libro"] == {
+        "v": 1, "spread": 0.1998,
+        "compras_1": 2990, "ventas_1": 6052,      # 100×10 + 99,5×20 | 100,2×10 + 101×50
+        "compras_2": 3581, "ventas_2": 6255,      # + 98,5×6 | + 101,5×2
+        "compras_5": 13181, "ventas_5": 7295,     # + 96×100 | + 104×10 (las de 90 y 120 quedan fuera)
+        "muro_compra": 9600, "muro_compra_dist": -4.096, "muro_venta": 5050, "muro_venta_dist": 0.899,
+    }
+    fa_book = coins["FAUSDT"]["libro"]
+    assert "compras_1" in fa_book and "compras_2" not in fa_book and "compras_5" not in fa_book
+    assert {"ventas_1", "ventas_2", "ventas_5"} <= set(fa_book)  # del lado de las ventas está el libro entero
+    assert page.locator("#grid .card").count() == 2 and "libro" not in page.text_content("#grid").lower()
     assert page.errors == []
