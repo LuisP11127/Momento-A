@@ -278,8 +278,10 @@ def features(entry: Entry, data: SymbolData, btc_hourly: Sequence[Candle] = ()) 
     return f
 
 
-def outcomes(entry: Entry, data: SymbolData, now_ms: int, horizons: Iterable[int] = (1, 3, 7)) -> dict[str, Optional[float]]:
-    """Qué pasó después del escaneo: máximo y mínimo frente al precio de seguimiento en cada plazo."""
+def outcomes(entry: Entry, data: SymbolData, now_ms: int, horizons: Iterable[int] = (1, 3, 7),
+             target: float = 20.0, stop: float = 10.0) -> dict[str, Optional[float]]:
+    """Qué pasó después del escaneo: máximo y mínimo frente al precio de seguimiento en cada plazo, y si
+    subió +``target`` % antes de caer −``stop`` % (si en la misma hora pasan las dos cosas, cuenta la caída)."""
     start = entry.hora_ms // HOUR_MS * HOUR_MS
     after = [c for c in data.hourly if c.open_time >= start]
     last = after[-1].close_time if after else entry.hora_ms
@@ -290,6 +292,16 @@ def outcomes(entry: Entry, data: SymbolData, now_ms: int, horizons: Iterable[int
         o[f"max_{d}d"] = pct(max(c.high for c in window), entry.precio) if window and complete else None
         o[f"min_{d}d"] = pct(min(c.low for c in window), entry.precio) if window and complete else None
         o[f"cierre_{d}d"] = pct(window[-1].close, entry.precio) if window and complete else None
+        won = None
+        if window and complete:
+            won = 0.0
+            for c in window:
+                if pct(c.low, entry.precio) <= -stop:
+                    break
+                if pct(c.high, entry.precio) >= target:
+                    won = 1.0
+                    break
+        o[f"gana_antes_{d}d"] = won
     return o
 
 
@@ -397,15 +409,25 @@ class Evaluation:
     signals: list[dict]
     index_v0: Optional[dict]
     index_cv: Optional[dict]
+    mode: str = "max"
 
 
-def evaluate(rows: Sequence[dict], horizon: int, threshold: float, sample: str) -> Optional[Evaluation]:
-    """Qué señales separan las monedas cuyo máximo a ``horizon`` días llegó a +``threshold`` %."""
-    key = f"max_{horizon}d"
-    rows = [r for r in rows if r["resultado"].get(key) is not None]
+def evaluate(rows: Sequence[dict], horizon: int, threshold: float, sample: str, mode: str = "max") -> Optional[Evaluation]:
+    """Qué señales separan las monedas que subieron en ``horizon`` días.
+
+    mode "max": el máximo llegó a +``threshold`` %. mode "antes": subió +``threshold`` % antes de caer
+    −``threshold``/2 %, que separa la dirección de la simple volatilidad. Para cada señal se calcula también
+    si separa las que cayeron −``threshold``/2 %: si lo hace igual de bien, mide volatilidad, no giro.
+    """
+    key, low_key, won_key = f"max_{horizon}d", f"min_{horizon}d", f"gana_antes_{horizon}d"
+    rows = [r for r in rows if r["resultado"].get(key) is not None and r["resultado"].get(low_key) is not None]
     if len(rows) < 10:
         return None
-    labels = [r["resultado"][key] >= threshold for r in rows]
+    if mode == "antes":
+        labels = [r["resultado"].get(won_key) == 1.0 for r in rows]
+    else:
+        labels = [r["resultado"][key] >= threshold for r in rows]
+    drops = [r["resultado"][low_key] <= -threshold / 2 for r in rows]
     gains = [r["resultado"][key] for r in rows]
     signals = []
     for name in LABELS:
@@ -422,6 +444,7 @@ def evaluate(rows: Sequence[dict], horizon: int, threshold: float, sample: str) 
         lose = [v for v, y in zip(raw, lab) if not y]
         signals.append({
             "senal": name, "nombre": LABELS[name], "n": len(idx), "auc": a, "ic90": bootstrap_auc([pcts[i] for i in idx], lab),
+            "auc_caida": auc([pcts[i] for i in idx], [drops[i] for i in idx]),
             "spearman": spearman(raw, [gains[i] for i in idx]),
             "mediana_suben": statistics.median(win) if win else None, "mediana_resto": statistics.median(lose) if lose else None,
             "hipotesis": HYPOTHESIS.get(name),
@@ -464,7 +487,7 @@ def evaluate(rows: Sequence[dict], horizon: int, threshold: float, sample: str) 
     if index_cv is not None:
         index_cv["senales"] = sorted(picked.items(), key=lambda kv: -kv[1])
         index_cv["dias"] = len(days)
-    return Evaluation(horizon, threshold, sample, len(rows), sum(labels), signals, index_v0, index_cv)
+    return Evaluation(horizon, threshold, sample, len(rows), sum(labels), signals, index_v0, index_cv, mode)
 
 
 # ---------- descarga ----------
@@ -506,7 +529,7 @@ class Dataset:
 
 
 def build_dataset(entries: Sequence[Entry], client: BinanceClient, now_ms: int, horizon: int = 7, workers: int = 4,
-                  log: Callable[[str], None] = print) -> Dataset:
+                  log: Callable[[str], None] = print, threshold: float = 20.0) -> Dataset:
     """Descarga los datos de cada moneda y calcula sus señales y resultados."""
     by_symbol: dict[tuple[str, str], list[Entry]] = {}
     for e in entries:
@@ -558,7 +581,8 @@ def build_dataset(entries: Sequence[Entry], client: BinanceClient, now_ms: int, 
             for e in by_symbol[key]:
                 rows.append({"fecha": e.fecha, "mercado": e.mercado, "simbolo": e.simbolo, "hora_ms": e.hora_ms,
                              "precio": e.precio, "estrella": e.estrella,
-                             "senales": features(e, data, btc), "resultado": outcomes(e, data, now_ms)})
+                             "senales": features(e, data, btc),
+                             "resultado": outcomes(e, data, now_ms, target=threshold, stop=threshold / 2)})
     rows.sort(key=lambda r: r["hora_ms"])
     note = ""
     if futures_failed:
@@ -587,21 +611,26 @@ def report_markdown(dataset: Dataset, evaluations: Sequence[Evaluation], entries
         "",
         "**AUC**: probabilidad de que una moneda que subió tenga la señal más alta (dentro de su día de escaneo) que una que "
         "no subió. 0,50 = no separa; por encima, la señal alta acompaña a las que suben; por debajo, al revés. "
-        "El intervalo es del 90 %: si incluye 0,50, la señal puede ser casualidad.",
+        "El intervalo es del 90 %: si incluye 0,50, la señal puede ser casualidad. **AUC caída**: lo mismo para las "
+        "que cayeron; si una señal separa igual de bien las que suben y las que caen, mide volatilidad (movimiento), "
+        "no un giro al alza.",
         "",
     ]
     for ev in evaluations:
         base = ev.winners / ev.n * 100
-        lines += [f"## Máximo a {ev.horizon} días ≥ +{ev.threshold:g} % — {ev.sample}", "",
-                  f"{ev.n} monedas; {ev.winners} llegaron ({base:.0f} %).", ""]
-        lines += ["| Señal | n | AUC (IC 90 %) | Relación | Mediana: suben / resto | Hipótesis |", "|---|---:|---|---|---|---|"]
+        title = (f"Sube +{ev.threshold:g} % antes de caer −{ev.threshold / 2:g} % en {ev.horizon} días" if ev.mode == "antes"
+                 else f"Máximo a {ev.horizon} días ≥ +{ev.threshold:g} %")
+        lines += [f"## {title} — {ev.sample}", "", f"{ev.n} monedas; {ev.winners} lo consiguieron ({base:.0f} %).", ""]
+        lines += ["| Señal | n | AUC (IC 90 %) | AUC caída | Relación | Mediana: suben / resto | Hipótesis |",
+                  "|---|---:|---|---:|---|---|---|"]
         for s in ev.signals:
             ic = f"{s['ic90'][0]:.2f}–{s['ic90'][1]:.2f}" if s["ic90"] else "—"
             sure = s["ic90"] and (s["ic90"][0] > 0.5 or s["ic90"][1] < 0.5)
             direction = "alta→sube" if s["auc"] > 0.5 else "baja→sube"
             hyp = {1: "alta", -1: "baja"}.get(s["hipotesis"] or 0, "—")
             ok = "" if not s["hipotesis"] else (" ✓" if (s["auc"] > 0.5) == (s["hipotesis"] > 0) else " ✗")
-            lines.append(f"| {s['nombre']} | {s['n']} | **{s['auc']:.2f}** ({ic}){' •' if sure else ''} | {strength(s['auc'])}, {direction} | "
+            lines.append(f"| {s['nombre']} | {s['n']} | **{s['auc']:.2f}** ({ic}){' •' if sure else ''} | {fmt(s['auc_caida'])} | "
+                         f"{strength(s['auc'])}, {direction} | "
                          f"{fmt(s['mediana_suben'])} / {fmt(s['mediana_resto'])} | {hyp}{ok} |")
         lines += ["", "• = el intervalo no incluye 0,50. ✓/✗ = coincide o no con la hipótesis de partida.", ""]
         for title, idx in (("Índice v0 (hipótesis de partida, sin ajustar)", ev.index_v0),
@@ -659,22 +688,25 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     client = BinanceClient()
     print(f"{len(entries)} entradas, {len({(e.mercado, e.simbolo) for e in entries})} monedas. Descargando…")
     try:
-        dataset = build_dataset(entries, client, now_ms, args.horizonte, args.hilos)
+        dataset = build_dataset(entries, client, now_ms, args.horizonte, args.hilos, threshold=args.umbral)
     except BinanceFatalError as exc:
         print(f"Error: {exc}")
         return 2
     first = {(e.mercado, e.simbolo, e.hora_ms) for e in first_appearances(entries)}
     first_rows = [r for r in dataset.rows if (r["mercado"], r["simbolo"], r["hora_ms"]) in first]
+    first_label = "primera vez que salió cada moneda"
     evaluations = [ev for ev in (
-        evaluate(first_rows, args.horizonte, args.umbral, "primera vez que salió cada moneda"),
-        evaluate(dataset.rows, args.horizonte, args.umbral, "todas las entradas (con repeticiones)"),
-        evaluate(first_rows, 3, args.umbral / 2, "primera vez que salió cada moneda"),
+        evaluate(first_rows, args.horizonte, args.umbral, first_label, mode="antes"),
+        evaluate(first_rows, args.horizonte, args.umbral, first_label),
+        evaluate(dataset.rows, args.horizonte, args.umbral, "todas las entradas (con repeticiones)", mode="antes"),
+        evaluate(first_rows, 3, args.umbral / 2, first_label),
     ) if ev is not None]
     generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     markdown = report_markdown(dataset, evaluations, len(entries), generated)
     write_outputs(Path(args.salida), dataset, evaluations, markdown)
     if client.fallbacks_used:
-        print("Direcciones alternativas usadas: " + ", ".join(f"{m} → {u}" for m, u in client.fallbacks_used.items()))
+        print("Bloqueadas desde aquí, se usaron otras: " + ", ".join(
+            f"{blocked} → {client.base_urls[m]}" for m, blocked in client.fallbacks_used.items()))
     print(markdown)
     return 0
 

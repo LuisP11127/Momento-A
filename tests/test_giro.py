@@ -94,11 +94,17 @@ def test_features_measure_buying_flow_and_outcomes_measure_what_came_after():
     assert o["max_1d"] < 1 < o["max_3d"]  # el salto de +30 % llegó entre las horas 30 y 40
     assert o["max_3d"] == pytest.approx((1.3 * 1.001 - 1) * 100, rel=1e-6)
     assert outcomes(entry, data, now_ms=scan + 2 * DAY_MS)["max_3d"] is None  # todavía no han pasado 3 días
+    assert o["gana_antes_3d"] == 1.0 and o["gana_antes_1d"] == 0.0  # +20 % sin caer antes −10 %
+    # Si antes de subir cae más de un 10 %, no cuenta como acierto aunque luego llegue al +30 %.
+    dip, price2 = make_symbol(scan, after=lambda h: 0.85 if 5 <= h < 10 else 1.3 if 30 <= h < 40 else 1.0)
+    o2 = outcomes(Entry("2025-10-01", SPOT, "AAAUSDT", price2, scan), dip, now_ms=scan + 30 * DAY_MS)
+    assert o2["max_3d"] > 20 and o2["gana_antes_3d"] == 0.0
 
 
 def rows_for(signal_values, gains, days):
     return [{"fecha": d, "mercado": SPOT, "simbolo": f"S{i}USDT", "hora_ms": i, "precio": 1.0, "estrella": False,
-             "senales": {"flujo_24h": v, "rsi": 50.0 + (i % 3)}, "resultado": {"max_7d": g, "max_3d": g}}
+             "senales": {"flujo_24h": v, "rsi": 50.0 + (i % 3)},
+             "resultado": {"max_7d": g, "max_3d": g, "min_7d": -5.0, "gana_antes_7d": float(g >= 20)}}
             for i, (v, g, d) in enumerate(zip(signal_values, gains, days))]
 
 
@@ -112,6 +118,7 @@ def test_evaluate_finds_the_signal_that_separates_winners():
     assert top["senal"] == "flujo_24h" and top["auc"] == pytest.approx(1.0)
     assert ev.index_cv["auc"] == pytest.approx(1.0) and ev.index_cv["senales"][0][0] == "flujo_24h"
     assert [q["acierto"] for q in ev.index_v0["quintiles"]][-1] == 100.0
+    assert evaluate(rows_for(values, gains, days), 7, 20, "prueba", mode="antes").signals[0]["auc"] == pytest.approx(1.0)
 
 
 def test_load_entries_and_first_appearances(tmp_path):
