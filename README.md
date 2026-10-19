@@ -65,11 +65,16 @@ no hace falta ningún servidor ni que Binance acepte las IP de GitHub.
   **solo en el día de ese escaneo**: si GNS salió el 13 y el 15 y le pones la estrella en el
   escaneo del 15, la tiene el 15 y el 13 queda igual. Se guarda como el resto del seguimiento
   (navegador y GitHub).
+- **Giro 72** (en pruebas): el **índice de giro v1** de la moneda, de 0 a 100, en los escaneos
+  con velas 1D (ver [Índice de giro](#índice-de-giro-en-pruebas)). Compara cada moneda que cumple
+  los filtros con las demás del escaneo en cuatro señales; al pasar el ratón (o en el gráfico a
+  pantalla completa) se ve cuánto vale cada una. Se guarda en el seguimiento con la moneda. Es
+  una prueba: no es una señal de compra.
 - **Cumple en** marca en qué temporalidades (2h, 4h, 8h, 12h y 1D) se cumple también la
   condición.
 - Filtros **Todos / Spot / Futuros / No repetidas** (cada moneda una vez; si está en los dos
   mercados se queda la de spot), **Orden** (vela más fuerte, más cerca del cruce MA7/MA25, más
-  pegadas a la MA7, más bajistas, volumen o variación 24h, símbolo) y **Buscar moneda**.
+  pegadas a la MA7, más bajistas, volumen o variación 24h, índice de giro, símbolo) y **Buscar moneda**.
 - **Gráfico: 15m … 1D … 1W** cambia la temporalidad de todos los gráficos (por defecto 1D) y
   pide a Binance las velas del momento. **Tamaño S / M / L** cambia el tamaño de las tarjetas.
 - En la cuadrícula, la rueda del ratón desplaza la página. Al pulsar una tarjeta (o su botón
@@ -177,7 +182,7 @@ navegador y lo sube todo al conectar una clave nueva.
 |---|---|---|
 | **Scanner** | Pasa los tests y hace un escaneo real desde los servidores de GitHub. Resultado en el resumen de la ejecución e informe con los gráficos (`.html`, `.json`, `.csv`) en **Artifacts → momento-a**. | A mano en **Actions → Scanner → Run workflow** (con los filtros como opciones), y en cada pull request y cada cambio en `main`. |
 | **Web** | Publica la web en GitHub Pages con la lista de acciones tokenizadas al día y el seguimiento guardado en el repositorio. | En cada cambio en `main`, una vez al día y a mano. |
-| **Indicador** | Prueba el índice de giro con el historial del seguimiento (ver abajo). Informe en el resumen de la ejecución y datos de cada moneda en **Artifacts → indicador**. | A mano en **Actions → Indicador → Run workflow**. |
+| **Indicador** | Prueba el índice de giro con el historial del seguimiento (ver abajo). Informe en el resumen de la ejecución y datos de cada moneda en **Artifacts → indicador**. | Cada lunes y a mano en **Actions → Indicador → Run workflow**. |
 
 Para que **Web** publique la página, GitHub Pages tiene que estar activado con
 **Settings → Pages → Build and deployment → Source: GitHub Actions**.
@@ -209,6 +214,28 @@ días) y, para cada señal, cuánto separa las que subieron de las que no dentro
 ```bash
 python -m momento_a.giro docs/seguimiento --salida informe-giro   # o el workflow «Indicador»
 ```
+
+### Índice v1
+
+La primera prueba (19 de octubre de 2026, 171 monedas) dejó cuatro señales que separaban las
+monedas que subieron +20 % antes de caer −10 % sin confundirse con las que solo se movían mucho:
+
+| Señal | Cuenta a favor | AUC |
+|---|---|---|
+| Mínimo más alto: el mínimo de los 5 últimos días frente al de los 15 anteriores | que sea más alto | 0,71 |
+| Ratio long/short de cuentas (futuros; también para la moneda de spot si tiene contrato) | más largos | 0,66 |
+| Acumulación: más compras que ventas a mercado en 7 días con el precio de 7 días bajando | que la haya | 0,62 |
+| Compras a mercado de 24 h frente a las de 7 días | que bajen | 0,65 |
+
+El índice v1 ordena cada señal entre las monedas del escaneo que cumplen los filtros (0 la peor,
+1 la mejor) y hace la media de las que tenga la moneda: de 0 a 100. La web lo calcula al escanear
+con velas 1D (pide las velas de 1 hora y el ratio long/short de esas monedas) y lo guarda en el
+seguimiento con las cuatro señales; `INDEX_V1` en `giro.py` es la misma cuenta.
+
+Cada señal por separado funcionó, pero juntas aún no se pudieron comprobar: el workflow
+**Indicador** las vuelve a medir **cada lunes**, sobre todo con los días que no se usaron para
+elegirlas (desde el 12 de octubre de 2026), y con el índice que guardó la web. El informe dice
+cuántas monedas faltan hasta poder medirlo.
 
 El libro de órdenes no tiene historial en Binance: para estudiarlo hay que guardarlo en cada
 escaneo a partir de ahora.
@@ -300,7 +327,8 @@ python -m pytest
 Además de las del scanner en Python, `tests/test_web_browser.py` abre la web en Chromium con
 Binance y GitHub simulados y comprueba el escaneo (peticiones que no responden, errores y
 pausas de Binance), el guardado en GitHub tras escanear, las estrellas, las columnas del
-seguimiento, «Rumbo al 50», el filtro de acumulación y la vista en el móvil. El workflow
+seguimiento, «Rumbo al 50», el filtro de acumulación, el índice de giro (que da lo mismo que
+`giro.py` con las mismas velas) y la vista en el móvil. El workflow
 **Scanner** las pasa en cada cambio. Sin Playwright instalado se omiten.
 
 > Esto es una herramienta de filtrado, no una recomendación de inversión.

@@ -13,6 +13,10 @@ Después se mide qué pasó (máximo a 1, 3 y 7 días) y se comprueba qué seña
 que subieron de las que no. El libro de órdenes no tiene historial: se empezará a guardar en los
 escaneos (fase 2).
 
+El índice v1 (INDEX_V1) junta las cuatro señales que se sostuvieron en esta prueba; la web lo calcula
+igual en cada escaneo con velas 1D y lo guarda en el seguimiento. Cada semana se vuelve a medir, sobre
+todo con los días que no se usaron para elegirlo (desde V1_DESDE).
+
     python -m momento_a.giro docs/seguimiento --salida informe-giro
 """
 from __future__ import annotations
@@ -54,6 +58,19 @@ HYPOTHESIS = {
     "oi_24h": +1,            # interés abierto de 24 h (futuros)
     "financiacion": -1,      # financiación negativa: cortos pagando, posible cierre forzado
 }
+
+# Índice v1: las cuatro señales que separaron las monedas que subieron +20 % antes de caer −10 % en la
+# prueba del 19 oct 2026 (sin confundirse con las que solo se movían mucho). La web usa las mismas
+# señales, signos y cuenta (report_template.html, «índice de giro»).
+INDEX_V1 = {
+    "minimo_mas_alto": +1,   # el mínimo de 5 días por encima del de los 15 anteriores
+    "long_short": +1,        # más cuentas en largo que en corto (futuros)
+    "acumulacion": +1,       # compras a mercado de 7 días mientras el precio de 7 días baja
+    "flujo_tendencia": -1,   # compras a mercado de 24 h por debajo de las de 7 días
+}
+# Primer día de seguimiento que aún no tenía resultado a 7 días cuando se eligieron esas señales: desde
+# aquí, el índice v1 se mide con monedas que no influyeron en su elección.
+V1_DESDE = "2026-10-12"
 
 # Nombre legible de cada señal para el informe.
 LABELS = {
@@ -100,6 +117,7 @@ class Entry:
     precio: float
     hora_ms: int
     estrella: bool = False
+    giro: Optional[dict] = field(default=None, compare=False)  # índice de giro que guardó la web al escanear
 
 
 @dataclass
@@ -128,7 +146,8 @@ def load_entries(folder: Path) -> list[Entry]:
         for c in data.get("monedas", []) if isinstance(data, dict) else []:
             try:
                 entries.append(Entry(data.get("fecha") or path.stem, c["mercado"], c["simbolo"], float(c["precio"]),
-                                     parse_iso_ms(c["hora"]), bool(c.get("estrella"))))
+                                     parse_iso_ms(c["hora"]), bool(c.get("estrella")),
+                                     c["giro"] if isinstance(c.get("giro"), dict) else None))
             except (KeyError, TypeError, ValueError):
                 continue
     return sorted(entries, key=lambda e: e.hora_ms)
@@ -410,6 +429,9 @@ class Evaluation:
     index_v0: Optional[dict]
     index_cv: Optional[dict]
     mode: str = "max"
+    index_v1: Optional[dict] = None
+    index_v1_new: Optional[dict] = None  # solo días desde V1_DESDE
+    index_web: Optional[dict] = None     # el que guardó la web al escanear
 
 
 def evaluate(rows: Sequence[dict], horizon: int, threshold: float, sample: str, mode: str = "max") -> Optional[Evaluation]:
@@ -454,11 +476,16 @@ def evaluate(rows: Sequence[dict], horizon: int, threshold: float, sample: str, 
     def summary(scores: Sequence[Optional[float]]) -> Optional[dict]:
         idx = [i for i, s in enumerate(scores) if s is not None]
         if len(idx) < 15:
-            return None
+            return {"n": len(idx)} if idx else None  # todavía pocas monedas para medirlo
         sc, lab, gn = [scores[i] for i in idx], [labels[i] for i in idx], [gains[i] for i in idx]
         return {"n": len(idx), "auc": auc(sc, lab), "ic90": bootstrap_auc(sc, lab), "quintiles": quintiles(sc, lab, gn)}
 
     index_v0 = summary(index_scores(rows, HYPOTHESIS))
+    # El v1 de cada moneda, frente a todas las de su día (como en la web, frente a todas las del escaneo).
+    v1 = [r["giro_v1"] for r in rows] if all("giro_v1" in r for r in rows) else index_scores(rows, INDEX_V1)
+    index_v1 = summary(v1)
+    index_v1_new = summary([s if r["fecha"] >= V1_DESDE else None for s, r in zip(v1, rows)])
+    index_web = summary([r.get("giro_web") for r in rows])
     # Índice aprendido, probado día a día con los otros días: elige señales y signos sin ver el día que puntúa.
     days = sorted({r["fecha"] for r in rows})
     cv_scores: list[Optional[float]] = [None] * len(rows)
@@ -487,7 +514,8 @@ def evaluate(rows: Sequence[dict], horizon: int, threshold: float, sample: str, 
     if index_cv is not None:
         index_cv["senales"] = sorted(picked.items(), key=lambda kv: -kv[1])
         index_cv["dias"] = len(days)
-    return Evaluation(horizon, threshold, sample, len(rows), sum(labels), signals, index_v0, index_cv, mode)
+    return Evaluation(horizon, threshold, sample, len(rows), sum(labels), signals, index_v0, index_cv, mode,
+                      index_v1, index_v1_new, index_web)
 
 
 # ---------- descarga ----------
@@ -579,11 +607,19 @@ def build_dataset(entries: Sequence[Entry], client: BinanceClient, now_ms: int, 
                 errors.setdefault(f"{key[0]}:{key[1]}", "sin velas")
                 continue
             for e in by_symbol[key]:
+                signals = features(e, data, btc)
+                saved = e.giro or {}
+                # Binance solo guarda 30 días de ratio long/short: el que guardó la web al escanear lo conserva.
+                if signals["long_short"] is None and isinstance(saved.get("long_short"), (int, float)):
+                    signals["long_short"] = float(saved["long_short"])
+                web = saved.get("indice")
                 rows.append({"fecha": e.fecha, "mercado": e.mercado, "simbolo": e.simbolo, "hora_ms": e.hora_ms,
-                             "precio": e.precio, "estrella": e.estrella,
-                             "senales": features(e, data, btc),
+                             "precio": e.precio, "estrella": e.estrella, "senales": signals,
+                             "giro_web": float(web) if isinstance(web, (int, float)) else None,
                              "resultado": outcomes(e, data, now_ms, target=threshold, stop=threshold / 2)})
     rows.sort(key=lambda r: r["hora_ms"])
+    for r, score in zip(rows, index_scores(rows, INDEX_V1)):
+        r["giro_v1"] = score
     note = ""
     if futures_failed:
         note = f"Datos de futuros no disponibles para {len(futures_failed)} monedas (p. ej. {futures_failed[0]})."
@@ -633,9 +669,16 @@ def report_markdown(dataset: Dataset, evaluations: Sequence[Evaluation], entries
                          f"{strength(s['auc'])}, {direction} | "
                          f"{fmt(s['mediana_suben'])} / {fmt(s['mediana_resto'])} | {hyp}{ok} |")
         lines += ["", "• = el intervalo no incluye 0,50. ✓/✗ = coincide o no con la hipótesis de partida.", ""]
-        for title, idx in (("Índice v0 (hipótesis de partida, sin ajustar)", ev.index_v0),
+        for title, idx in (("Índice v1 en días nuevos (desde el " + V1_DESDE + ", que no se usaron para elegirlo)", ev.index_v1_new),
+                           ("Índice v1 guardado por la web al escanear", ev.index_web),
+                           ("Índice v1 en todos los días (salen favorecidos: con ellos se eligieron sus señales)", ev.index_v1),
+                           ("Índice v0 (hipótesis de partida, sin ajustar)", ev.index_v0),
                            ("Índice ajustado (probado cada día con los demás días)", ev.index_cv)):
             if not idx:
+                continue
+            if "auc" not in idx:
+                lines += [f"### {title}", "", f"Todavía {idx['n']} {'moneda' if idx['n'] == 1 else 'monedas'}; "
+                          "hacen falta 15 para medirlo.", ""]
                 continue
             ic = f"{idx['ic90'][0]:.2f}–{idx['ic90'][1]:.2f}" if idx["ic90"] else "—"
             lines += [f"### {title}", "", f"AUC **{idx['auc']:.2f}** ({ic}), {idx['n']} monedas.", "",
@@ -661,9 +704,11 @@ def write_outputs(folder: Path, dataset: Dataset, evaluations: Sequence[Evaluati
     outs = sorted({k for r in dataset.rows for k in r["resultado"]})
     with (folder / "datos.csv").open("w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["fecha", "mercado", "simbolo", "precio", "estrella", *names, *outs])
+        w.writerow(["fecha", "mercado", "simbolo", "precio", "estrella", "giro_web", "giro_v1", *names, *outs])
         for r in dataset.rows:
-            w.writerow([r["fecha"], r["mercado"], r["simbolo"], r["precio"], int(r["estrella"]),
+            score = r.get("giro_v1")
+            w.writerow([r["fecha"], r["mercado"], r["simbolo"], r["precio"], int(r["estrella"]), r.get("giro_web"),
+                        None if score is None else round(score, 1),
                         *[r["senales"].get(n) for n in names], *[r["resultado"].get(k) for k in outs]])
     (folder / "resumen.json").write_text(json.dumps([ev.__dict__ for ev in evaluations], ensure_ascii=False, indent=1),
                                          encoding="utf-8")

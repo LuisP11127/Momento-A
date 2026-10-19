@@ -34,6 +34,19 @@ def test_collect_tracking_keeps_stars(tmp_path):
     assert "estrella" not in day["monedas"][2] and "estrella_hora" not in day["monedas"][2]
 
 
+def test_collect_tracking_keeps_the_giro_index(tmp_path):
+    base = {"mercado": "spot", "base": "AAA", "quote": "USDT", "precio": 2.0, "hora": "2026-10-19T18:15:34.833Z", "intervalo": "1d"}
+    giro = {"v": 1, "indice": 72, "minimo_mas_alto": 9.48, "long_short": 2.18, "acumulacion": 1, "flujo_tendencia": -0.79}
+    write(tmp_path / "2026-10-19.json", {"fecha": "2026-10-19", "monedas": [
+        dict(base, simbolo="AAAUSDT", giro=dict(giro, otro="se ignora", long_short=None)),
+        dict(base, simbolo="BBBUSDT", giro={"indice": "alto"}),  # no es un número: fuera
+        dict(base, simbolo="CCCUSDT")]})
+    (day,) = collect_tracking(tmp_path)
+    a, b, c = day["monedas"]
+    assert a["giro"] == {k: v for k, v in giro.items() if k != "long_short"}
+    assert "giro" not in b and "giro" not in c
+
+
 def test_main_writes_app_and_tracking(tmp_path, capsys):
     folder = tmp_path / "seguimiento"
     folder.mkdir()

@@ -6,6 +6,9 @@ from momento_a.binance import FUTURES, SPOT, Candle, Instrument
 from momento_a.giro import (
     DAY_MS,
     HOUR_MS,
+    INDEX_V1,
+    V1_DESDE,
+    Dataset,
     Entry,
     SymbolData,
     auc,
@@ -14,6 +17,7 @@ from momento_a.giro import (
     evaluate,
     features,
     first_appearances,
+    index_scores,
     load_entries,
     outcomes,
     report_markdown,
@@ -121,16 +125,58 @@ def test_evaluate_finds_the_signal_that_separates_winners():
     assert evaluate(rows_for(values, gains, days), 7, 20, "prueba", mode="antes").signals[0]["auc"] == pytest.approx(1.0)
 
 
+def v1_rows(days, per_day=10):
+    """Monedas con las señales del índice v1; suben las del mínimo más alto y las de compras de 24 h a la baja.
+    La web guardó su índice solo en los días desde V1_DESDE."""
+    rows = []
+    for d in days:
+        for i in range(per_day):
+            low, flow = float(i), float(per_day - i)
+            gain = 40.0 if i >= per_day // 2 else 5.0
+            rows.append({"fecha": d, "mercado": SPOT, "simbolo": f"S{i}USDT", "hora_ms": i, "precio": 1.0, "estrella": False,
+                         "senales": {"minimo_mas_alto": low, "flujo_tendencia": flow, "long_short": None, "acumulacion": None},
+                         "giro_web": i * 10.0 if d >= V1_DESDE else None,
+                         "resultado": {"max_7d": gain, "min_7d": -5.0, "gana_antes_7d": float(gain >= 20)}})
+    return rows
+
+
+def test_index_v1_is_measured_on_new_days_and_as_saved_by_the_web():
+    assert set(INDEX_V1) == {"minimo_mas_alto", "long_short", "acumulacion", "flujo_tendencia"}
+    old_days = ["2026-10-01", "2026-10-02", "2026-10-03"]
+    ev = evaluate(v1_rows(old_days + [V1_DESDE, "2026-10-20"]), 7, 20, "prueba", mode="antes")
+    assert ev.index_v1["n"] == 50 and ev.index_v1["auc"] == pytest.approx(1.0)
+    assert ev.index_v1_new["n"] == 20 and ev.index_v1_new["auc"] == pytest.approx(1.0)  # solo los días nuevos
+    assert ev.index_web["n"] == 20 and ev.index_web["auc"] == pytest.approx(1.0)
+    # Con pocos días nuevos, el informe dice cuántas monedas faltan en vez de dar un AUC sin sentido.
+    few = evaluate(v1_rows(old_days) + v1_rows([V1_DESDE], per_day=6), 7, 20, "prueba", mode="antes")
+    assert few.index_v1_new == {"n": 6} and few.index_web == {"n": 6}
+    md = report_markdown(Dataset(v1_rows(old_days), {}), [few], 36, "hoy")
+    assert "Índice v1 en días nuevos" in md and "Todavía 6 monedas; hacen falta 15 para medirlo." in md
+
+
+def test_index_scores_rank_each_coin_within_its_day():
+    rows = [{"fecha": "d", "senales": {"minimo_mas_alto": 5.0, "flujo_tendencia": -1.0, "long_short": 2.0, "acumulacion": 1.0}},
+            {"fecha": "d", "senales": {"minimo_mas_alto": 1.0, "flujo_tendencia": 3.0, "long_short": None, "acumulacion": 0.0}},
+            {"fecha": "d", "senales": {"minimo_mas_alto": 3.0, "flujo_tendencia": 1.0, "long_short": 1.0, "acumulacion": 0.0}},
+            {"fecha": "e", "senales": {"minimo_mas_alto": 0.0, "flujo_tendencia": None, "long_short": None, "acumulacion": None}}]
+    best, worst, middle, alone = index_scores(rows, INDEX_V1)
+    assert best == pytest.approx(100.0)
+    assert worst == pytest.approx((0 + 0 + 0.25) / 3 * 100)  # sin ratio long/short: media de las otras tres
+    assert middle == pytest.approx((0.5 + 0.5 + 0 + 0.25) / 4 * 100)
+    assert alone == pytest.approx(50.0)  # sola en su día
+
+
 def test_load_entries_and_first_appearances(tmp_path):
     coin = {"mercado": "spot", "simbolo": "AAAUSDT", "base": "AAA", "quote": "USDT", "intervalo": "1d"}
     (tmp_path / "2025-10-01.json").write_text(json.dumps({"fecha": "2025-10-01", "monedas": [
         dict(coin, precio=1.0, hora="2025-10-01T19:00:00.000Z"),
-        dict(coin, simbolo="BBBUSDT", precio=2.0, hora="2025-10-01T19:00:00.000Z", estrella=True, estrella_hora="x")]}))
+        dict(coin, simbolo="BBBUSDT", precio=2.0, hora="2025-10-01T19:00:00.000Z", estrella=True, estrella_hora="x",
+             giro={"v": 1, "indice": 72, "long_short": 2.1})]}))
     (tmp_path / "2025-10-02.json").write_text(json.dumps({"fecha": "2025-10-02", "monedas": [
         dict(coin, precio=0.9, hora="2025-10-02T19:00:00.000Z"), {"roto": True}]}))
     entries = load_entries(tmp_path)
     assert [(e.simbolo, e.fecha) for e in entries] == [("AAAUSDT", "2025-10-01"), ("BBBUSDT", "2025-10-01"), ("AAAUSDT", "2025-10-02")]
-    assert entries[1].estrella
+    assert entries[1].estrella and entries[1].giro["indice"] == 72 and entries[0].giro is None
     assert [(e.simbolo, e.fecha) for e in first_appearances(entries)] == [("AAAUSDT", "2025-10-01"), ("BBBUSDT", "2025-10-01")]
 
 
@@ -167,15 +213,20 @@ def test_build_dataset_and_report(tmp_path):
     scans = {"AAAUSDT": (scan, True), "BBBUSDT": (scan, False)}
     client = FakeClient(scans)
     price = make_symbol(scan)[1]
-    entries = [Entry("2025-10-19", SPOT, s, price, t) for s, (t, _) in scans.items()]
+    saved = {"v": 1, "indice": 64, "long_short": 1.9}  # lo que guardó la web al escanear
+    entries = [Entry("2025-10-19", SPOT, s, price, t, giro=saved) for s, (t, _) in scans.items()]
     data = build_dataset(entries, client, now_ms=scan + 20 * DAY_MS, log=lambda m: None)
     assert [r["simbolo"] for r in data.rows] == ["AAAUSDT", "BBBUSDT"] and not data.errors
     a, b = data.rows
     assert a["senales"]["financiacion"] == pytest.approx(-0.01) and a["senales"]["oi_24h"] is not None
     assert b["senales"]["financiacion"] is None  # BBB no tiene futuros
+    # Binance da el ratio long/short de AAA; el de BBB ya no está en Binance y se usa el que guardó la web.
+    assert a["senales"]["long_short"] > 1000 and b["senales"]["long_short"] == pytest.approx(1.9)
+    assert a["giro_web"] == b["giro_web"] == 64.0 and a["giro_v1"] > b["giro_v1"]
     assert a["senales"]["flujo_24h"] > b["senales"]["flujo_24h"] and a["resultado"]["max_7d"] > 20 > b["resultado"]["max_7d"]
     assert ("futures", "BBBUSDT", "/futures/data/openInterestHist") not in client.calls
     md = report_markdown(data, [], len(entries), "hoy")
     assert md.startswith("# Índice de giro") and "2 entradas de seguimiento" in md
     write_outputs(tmp_path, data, [], md)
-    assert (tmp_path / "informe.md").exists() and "flujo_24h" in (tmp_path / "datos.csv").read_text().splitlines()[0]
+    header = (tmp_path / "datos.csv").read_text().splitlines()[0]
+    assert (tmp_path / "informe.md").exists() and "flujo_24h" in header and "giro_v1" in header

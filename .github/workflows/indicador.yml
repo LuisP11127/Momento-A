@@ -3,7 +3,10 @@ name: Indicador
 # Prueba del índice de giro con el historial del seguimiento: calcula las señales de cada moneda tal como
 # estaban al escanear (volumen, compras a mercado, medias, futuros...) y mide qué pasó después. El informe
 # sale en el resumen de la ejecución y, con los datos de cada moneda, en Artifacts → indicador.
+# Cada lunes vuelve a medir el índice v1, sobre todo con los días que no se usaron para elegirlo.
 on:
+  schedule:
+    - cron: "23 7 * * 1"  # lunes, 07:23 UTC (02:23 en Lima)
   workflow_dispatch:
     inputs:
       horizonte:

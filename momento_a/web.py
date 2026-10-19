@@ -19,6 +19,7 @@ from .report import render_report
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 COIN_FIELDS = ("mercado", "simbolo", "base", "quote", "precio", "hora", "intervalo")
 STAR_FIELDS = ("estrella", "estrella_hora")  # solo en las monedas a las que alguna vez se puso estrella
+GIRO_FIELDS = ("v", "indice", "minimo_mas_alto", "long_short", "acumulacion", "flujo_tendencia")  # índice de giro al escanear
 
 
 def collect_tracking(folder: Path) -> list[dict]:
@@ -47,6 +48,9 @@ def collect_tracking(folder: Path) -> list[dict]:
             if not (isinstance(coin, dict) and coin.get("mercado") and coin.get("simbolo")):
                 continue
             item = {field: coin.get(field) for field in COIN_FIELDS}
+            giro = coin.get("giro")
+            if isinstance(giro, dict) and isinstance(giro.get("indice"), (int, float)):
+                item["giro"] = {k: giro[k] for k in GIRO_FIELDS if isinstance(giro.get(k), (int, float))}
             if coin.get("estrella_hora"):
                 item.update(estrella=bool(coin.get("estrella")), estrella_hora=coin["estrella_hora"])
             coins.append(item)
