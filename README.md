@@ -177,6 +177,7 @@ navegador y lo sube todo al conectar una clave nueva.
 |---|---|---|
 | **Scanner** | Pasa los tests y hace un escaneo real desde los servidores de GitHub. Resultado en el resumen de la ejecución e informe con los gráficos (`.html`, `.json`, `.csv`) en **Artifacts → momento-a**. | A mano en **Actions → Scanner → Run workflow** (con los filtros como opciones), y en cada pull request y cada cambio en `main`. |
 | **Web** | Publica la web en GitHub Pages con la lista de acciones tokenizadas al día y el seguimiento guardado en el repositorio. | En cada cambio en `main`, una vez al día y a mano. |
+| **Indicador** | Prueba el índice de giro con el historial del seguimiento (ver abajo). Informe en el resumen de la ejecución y datos de cada moneda en **Artifacts → indicador**. | A mano en **Actions → Indicador → Run workflow**. |
 
 Para que **Web** publique la página, GitHub Pages tiene que estar activado con
 **Settings → Pages → Build and deployment → Source: GitHub Actions**.
@@ -185,6 +186,32 @@ Los servidores de GitHub están en EE. UU., donde Binance bloquea `api.binance.c
 `fapi.binance.com` (error 451). El scanner lo detecta y pasa solo a `data-api.binance.vision`
 (spot) y `www.binance.com` (futuros), que sirven los mismos datos públicos; lo indica en el
 resultado.
+
+## Índice de giro (en pruebas)
+
+`momento_a/giro.py` estudia qué señales anuncian un cambio de tendencia, con las monedas que el
+escáner guardó en el seguimiento. Para cada una calcula las señales **tal como estaban en el
+momento del escaneo** (la vela del día se rehace con las velas de 1 hora anteriores, sin mirar lo
+que pasó después):
+
+- precio y medias: distancia a la MA7, MA25 y MA99, pendiente de la MA7, RSI y su divergencia,
+  mínimo más alto, caída desde el máximo de 30 días, rango de 7 días;
+- volumen: volumen relativo de 24 h, volumen de velas verdes frente a rojas, OBV;
+- flujo comprador: qué parte del volumen fueron compras a mercado (dato de cada vela de Binance),
+  su delta acumulado y la «acumulación» (el delta sube mientras el precio baja);
+- futuros: interés abierto, financiación y ratio long/short de cuentas (Binance guarda unos 30
+  días).
+
+Después mide si la moneda **subió +20 % antes de caer −10 %** en 7 días (y el máximo a 3 y 7
+días) y, para cada señal, cuánto separa las que subieron de las que no dentro de su día de escaneo
+(AUC) y si separa igual las que cayeron (entonces mide volatilidad, no giro).
+
+```bash
+python -m momento_a.giro docs/seguimiento --salida informe-giro   # o el workflow «Indicador»
+```
+
+El libro de órdenes no tiene historial en Binance: para estudiarlo hay que guardarlo en cada
+escaneo a partir de ahora.
 
 ## Línea de comandos
 
