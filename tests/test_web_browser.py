@@ -467,7 +467,8 @@ def test_viewer_loads_the_whole_history(open_page):
 
 
 def test_section_of_coins_that_reached_50_with_starred_first(open_page):
-    """Sección «Llegaron al +50%»: AAA (día 1) y CCC (día 2, con estrella) llegaron; BBB y DDD no."""
+    """Sección «Llegaron al +50%»: AAA y CCC salieron los dos días y llegaron; BBB y DDD no. Cada moneda sale en su
+    día más antiguo (el 1) y, además, CCC en el día 2, en el que tiene estrella."""
     midnight = now_ms() // STEP["1d"] * STEP["1d"]
     scanned = {1: midnight - 5 * STEP["1d"] + 6 * 3_600_000, 2: midnight - 4 * STEP["1d"] + 6 * 3_600_000}
     crossed = {"AAAUSDT": midnight - 3 * STEP["1d"] + 12 * 3_600_000, "CCCUSDT": midnight - 2 * STEP["1d"] + 12 * 3_600_000}
@@ -491,8 +492,9 @@ def test_section_of_coins_that_reached_50_with_starred_first(open_page):
         return dict({"mercado": "spot", "simbolo": sym, "base": sym[:-4], "quote": "USDT", "precio": 10.0, "hora": hora, "intervalo": "1d"}, **extra)
 
     star_time = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
-    days = {fechas[1]: {"fecha": fechas[1], "monedas": [coin("AAAUSDT", 1), coin("BBBUSDT", 1)]},
-            fechas[2]: {"fecha": fechas[2], "monedas": [coin("CCCUSDT", 2, estrella=True, estrella_hora=star_time), coin("DDDUSDT", 2)]}}
+    days = {fechas[1]: {"fecha": fechas[1], "monedas": [coin("AAAUSDT", 1), coin("BBBUSDT", 1), coin("CCCUSDT", 1)]},
+            fechas[2]: {"fecha": fechas[2], "monedas": [coin("AAAUSDT", 2), coin("CCCUSDT", 2, estrella=True, estrella_hora=star_time),
+                                                       coin("DDDUSDT", 2)]}}
     binance = Binance(spot={s: "match" for s in ("AAAUSDT", "BBBUSDT", "CCCUSDT", "DDDUSDT")}, futures={}, klines=klines,
                       price=lambda market, sym: price(sym, now_ms()))
     page = open_page(binance, storage={"seguimiento": days}, path="#seguimiento")
@@ -504,21 +506,23 @@ def test_section_of_coins_that_reached_50_with_starred_first(open_page):
     def hit_rows():
         return page.eval_on_selector_all(".day.hits tbody tr", "rs => rs.map(r => r.classList.contains('group') ? r.textContent"
                                          " : r.querySelector('.coin').firstChild.textContent + (r.classList.contains('starred') ? '★' : '')"
-                                         " + ' ' + r.querySelector('.c-day').textContent)")
+                                         " + ' ' + r.dataset.fecha)")
 
     rows = hit_rows()
-    assert rows[0] == "★ Con estrella · 1" and rows[1].startswith("CCC★ ") and rows[2] == "Sin estrella · 1" and rows[3].startswith("AAA ")
-    assert len(rows) == 4  # BBB y DDD no llegaron
-    assert page.text_content("#track-view button[aria-pressed='true'] .count") == "2"
+    assert rows[:2] == ["★ Con estrella · 1", f"CCC★ {fechas[2]}"]  # el día con estrella, aunque CCC se repita
+    assert rows[2] == "Sin estrella · 2" and sorted(rows[3:]) == [f"AAA {fechas[1]}", f"CCC {fechas[1]}"]  # su día más antiguo
+    assert len(rows) == 5  # ni AAA del día 2 (repetida), ni BBB ni DDD (no llegaron)
+    assert page.text_content("#track-view button[aria-pressed='true'] .count") == "3"
     heads = page.eval_on_selector_all(".day.hits thead th", "ths => ths.map(t => t.textContent)")
     assert heads[:3] == ["Moneda", "Día", "Precio seguimiento"] and "Rumbo al 50" in heads
     # Estrella desde la sección: AAA sube con las de estrella, solo en su día.
     page.locator('.day.hits tr[data-key="spot:AAAUSDT"] .star').click()
-    assert [r.split(" ")[0] for r in hit_rows() if not r.startswith(("★", "Sin"))] in (["CCC★", "AAA★"], ["AAA★", "CCC★"])
+    rows = hit_rows()
+    assert rows[0] == "★ Con estrella · 2" and sorted(rows[1:3]) == [f"AAA★ {fechas[1]}", f"CCC★ {fechas[2]}"]
     stored = local_days(page)
     assert starred(stored, fechas[1], "AAAUSDT") and starred(stored, fechas[2], "CCCUSDT")
     # El gráfico de una moneda de la sección lleva la estrella de su día.
-    page.click('.day.hits tr[data-key="spot:CCCUSDT"]')
+    page.click(f'.day.hits tr[data-key="spot:CCCUSDT"][data-fecha="{fechas[2]}"]')
     assert page.get_attribute("#v-star .star", "aria-pressed") == "true"
     page.keyboard.press("Escape")
     # No se borra nada: la vista por días sigue con sus dos días y sus cuatro monedas.
