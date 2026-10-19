@@ -484,8 +484,9 @@ def evaluate(rows: Sequence[dict], horizon: int, threshold: float, sample: str, 
     # El v1 de cada moneda, frente a todas las de su día (como en la web, frente a todas las del escaneo).
     v1 = [r["giro_v1"] for r in rows] if all("giro_v1" in r for r in rows) else index_scores(rows, INDEX_V1)
     index_v1 = summary(v1)
-    index_v1_new = summary([s if r["fecha"] >= V1_DESDE else None for s, r in zip(v1, rows)])
-    index_web = summary([r.get("giro_web") for r in rows])
+    # Estos dos se miden cada semana: el informe dice cuántas monedas llevan, aunque aún no haya ninguna.
+    index_v1_new = summary([s if r["fecha"] >= V1_DESDE else None for s, r in zip(v1, rows)]) or {"n": 0}
+    index_web = summary([r.get("giro_web") for r in rows]) or {"n": 0}
     # Índice aprendido, probado día a día con los otros días: elige señales y signos sin ver el día que puntúa.
     days = sorted({r["fecha"] for r in rows})
     cv_scores: list[Optional[float]] = [None] * len(rows)
@@ -677,7 +678,7 @@ def report_markdown(dataset: Dataset, evaluations: Sequence[Evaluation], entries
             if not idx:
                 continue
             if "auc" not in idx:
-                lines += [f"### {title}", "", f"Todavía {idx['n']} {'moneda' if idx['n'] == 1 else 'monedas'}; "
+                lines += [f"### {title}", "", f"Todavía {idx['n']} {'moneda' if idx['n'] == 1 else 'monedas'} con resultado; "
                           "hacen falta 15 para medirlo.", ""]
                 continue
             ic = f"{idx['ic90'][0]:.2f}–{idx['ic90'][1]:.2f}" if idx["ic90"] else "—"

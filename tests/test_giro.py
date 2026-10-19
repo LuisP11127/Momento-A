@@ -150,8 +150,11 @@ def test_index_v1_is_measured_on_new_days_and_as_saved_by_the_web():
     # Con pocos días nuevos, el informe dice cuántas monedas faltan en vez de dar un AUC sin sentido.
     few = evaluate(v1_rows(old_days) + v1_rows([V1_DESDE], per_day=6), 7, 20, "prueba", mode="antes")
     assert few.index_v1_new == {"n": 6} and few.index_web == {"n": 6}
-    md = report_markdown(Dataset(v1_rows(old_days), {}), [few], 36, "hoy")
-    assert "Índice v1 en días nuevos" in md and "Todavía 6 monedas; hacen falta 15 para medirlo." in md
+    none = evaluate(v1_rows(old_days), 7, 20, "prueba", mode="antes")
+    assert none.index_v1_new == {"n": 0} and none.index_web == {"n": 0}
+    md = report_markdown(Dataset(v1_rows(old_days), {}), [few, none], 36, "hoy")
+    assert "Índice v1 en días nuevos" in md and "Todavía 6 monedas con resultado; hacen falta 15 para medirlo." in md
+    assert "Todavía 0 monedas con resultado" in md
 
 
 def test_index_scores_rank_each_coin_within_its_day():
