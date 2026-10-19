@@ -78,6 +78,9 @@ class Candle:
     close_time: int
     quote_volume: float
     volume: float = 0.0  # en la moneda base, como el volumen del gráfico de Binance
+    # Parte del volumen que fueron compras a mercado (el comprador cruzó el libro): presión compradora.
+    taker_buy_volume: float = 0.0
+    trades: int = 0
 
     @classmethod
     def from_kline(cls, k: list[Any]) -> "Candle":
@@ -90,6 +93,8 @@ class Candle:
             close_time=int(k[6]),
             quote_volume=float(k[7]),
             volume=float(k[5]),
+            trades=int(k[8]) if len(k) > 8 else 0,
+            taker_buy_volume=float(k[9]) if len(k) > 9 else 0.0,
         )
 
 
@@ -198,6 +203,24 @@ class BinanceClient:
         path = "/api/v3/klines" if instrument.market == SPOT else "/fapi/v1/klines"
         params = {"symbol": instrument.symbol, "interval": interval, "limit": limit}
         return [Candle.from_kline(k) for k in self._get(instrument.market, path, params)]
+
+    def candles_between(self, market: str, symbol: str, interval: str, start_ms: int, end_ms: int) -> list[Candle]:
+        """Todas las velas de ``interval`` que abren entre ``start_ms`` y ``end_ms`` (en varias peticiones de 1000)."""
+        path = "/api/v3/klines" if market == SPOT else "/fapi/v1/klines"
+        out: list[Candle] = []
+        start = start_ms
+        while start <= end_ms:
+            params = {"symbol": symbol, "interval": interval, "startTime": start, "endTime": end_ms, "limit": 1000}
+            page = [Candle.from_kline(k) for k in self._get(market, path, params)]
+            out.extend(c for c in page if c.open_time >= start)
+            if len(page) < 1000:
+                break
+            start = page[-1].open_time + 1
+        return out
+
+    def futures_data(self, path: str, params: dict) -> Any:
+        """Datos de derivados de futuros (interés abierto, financiación, ratio long/short...)."""
+        return self._get(FUTURES, path, params)
 
     def daily_candles(self, instrument: Instrument, limit: int = KLINES_LIMIT) -> list[Candle]:
         return self.candles(instrument, "1d", limit)

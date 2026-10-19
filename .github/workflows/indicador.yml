@@ -1,0 +1,50 @@
+name: Indicador
+
+# Prueba del índice de giro con el historial del seguimiento: calcula las señales de cada moneda tal como
+# estaban al escanear (volumen, compras a mercado, medias, futuros...) y mide qué pasó después. El informe
+# sale en el resumen de la ejecución y, con los datos de cada moneda, en Artifacts → indicador.
+# Cada lunes vuelve a medir el índice v1, sobre todo con los días que no se usaron para elegirlo.
+on:
+  schedule:
+    - cron: "23 7 * * 1"  # lunes, 07:23 UTC (02:23 en Lima)
+  workflow_dispatch:
+    inputs:
+      horizonte:
+        description: Días para medir el máximo después del escaneo
+        type: string
+        default: "7"
+      umbral:
+        description: Subida del máximo que cuenta como acierto (%)
+        type: string
+        default: "20"
+  push:
+    branches-ignore: [main]  # al cambiar el indicador en una rama de trabajo
+    paths: ["momento_a/giro.py", ".github/workflows/indicador.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  informe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Probar el índice con el historial del seguimiento
+        env:
+          HORIZONTE: ${{ inputs.horizonte || '7' }}
+          UMBRAL: ${{ inputs.umbral || '20' }}
+        run: |
+          python -m momento_a.giro docs/seguimiento --salida informe-giro --horizonte "$HORIZONTE" --umbral "$UMBRAL"
+          cat informe-giro/informe.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: indicador
+          path: informe-giro/
+          if-no-files-found: ignore

@@ -143,6 +143,12 @@ input[type="search"] { width: 13rem; max-width: 100%; }
 .card-foot { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 13px; color: var(--muted); }
 .card-foot b { font: 500 13px var(--font-mono); color: var(--fg); font-variant-numeric: tabular-nums; }
 .card-foot .acum-tag b { color: var(--accent); }
+/* Índice de giro (experimental): borde discontinuo; en verde si es alto. */
+.giro { font: 500 11px/1 var(--font-mono); white-space: nowrap; padding: 3px 6px; border: 1px dashed var(--line); border-radius: 4px; color: var(--muted); cursor: help; }
+.giro.alto { color: var(--up); border-color: color-mix(in srgb, var(--up) 60%, transparent); }
+.giro.bajo { opacity: 0.7; }
+.coins .giro { margin-left: 6px; vertical-align: 1px; }
+.viewer-stats .giro-detail b { font-family: var(--font-mono); }
 
 body.tracking .scan-only { display: none !important; }
 .seg.views { align-self: center; }
@@ -352,6 +358,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
         <option value="bajista">Más bajistas (lejos de MA99)</option>
         <option value="volumen">Mayor volumen 24h</option>
         <option value="variacion">Mayor variación 24h</option>
+        <option value="giro">Mayor índice de giro (experimental)</option>
         <option value="simbolo">Símbolo</option>
       </select>
     </label>
@@ -383,6 +390,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
           <option value="maximo">Mayor máximo</option>
           <option value="minimo">Peor mínimo</option>
           <option value="rumbo">Rumbo al 50 (las que llegaron antes)</option>
+          <option value="giro">Índice de giro al escanear (experimental)</option>
           <option value="moneda">Moneda</option>
           <option value="escaneo">Orden del escaneo</option>
         </select>
@@ -807,6 +815,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     bajista: (a, b) => (a.vs_ma99_pct ?? Infinity) - (b.vs_ma99_pct ?? Infinity),
     volumen: (a, b) => (b.volumen_24h || 0) - (a.volumen_24h || 0),
     variacion: (a, b) => (b.var_24h_pct ?? -Infinity) - (a.var_24h_pct ?? -Infinity),
+    giro: (a, b) => giroValue(b) - giroValue(a),
     simbolo: (a, b) => a.simbolo.localeCompare(b.simbolo),
   };
   function maLegend(it, idx, tf) {
@@ -866,7 +875,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const tracked = trackedCoin(fecha, it);
     const on = !(tracked && tracked.estrella);
     setStar(fecha, tracked || { mercado: it.mercado, simbolo: it.simbolo, base: it.base, quote: it.quote, precio: it._precio ?? it.precio,
-      hora: state.data.generado, intervalo: it.intervalo || state.data.intervalo }, on);
+      hora: state.data.generado, intervalo: it.intervalo || state.data.intervalo, giro: it.giro, libro: it.libro }, on);
     paintStar(button, on, it.simbolo);
   }
   function card(it, index, starred) {
@@ -881,7 +890,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       h("div", { class: "card-head" },
         h("span", { class: "sym" }, it.base || it.simbolo, h("small", { text: it.quote ? "/" + it.quote : "" })),
         h("span", { class: "badge", text: MARKET_NAMES[it.mercado] || it.mercado }),
-        star, expand),
+        giroTag(it.giro), star, expand),
       h("div", { class: "figures" },
         h("span", { class: "price", text: fmtPrice(it.precio) }),
         h("span", { class: "chg " + (chg >= 0 ? "up" : "down"), text: fmtPct(chg) + " vela " + tfLabel(it.intervalo || state.data.intervalo) })),
@@ -1118,7 +1127,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
         h("span", null, "Vol 24h ", h("b", { text: fmtVol(it.volumen_24h) })),
         it._acum ? h("span", null, "Acumulación ", h("b", { text: acumText(it._acum) })) : null,
         it.var_24h_pct == null ? null : h("span", null, "24h ", h("b", { class: it.var_24h_pct >= 0 ? "up" : "down", text: fmtPct(it.var_24h_pct) })),
-        h("span", null, h("b", { text: (index + 1) + "/" + state.view.length })));
+        h("span", null, h("b", { text: (index + 1) + "/" + state.view.length })),
+        ...giroDetail(it.giro));
     }
     const link = $("v-link");
     link.hidden = !!state.data.ejemplo;
@@ -1164,7 +1174,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       sg.min == null ? null : h("span", null, "Mínimo ", h("b", { text: fmtPrice(sg.min) }), " ", h("b", { class: "down", text: fmtPct(sg.minPct) })),
       sg.max == null ? null : h("span", null, "Máximo ", h("b", { text: fmtPrice(sg.max) }), " ", h("b", { class: "up", text: fmtPct(sg.maxPct) })),
       sg.rumbo ? h("span", null, "Rumbo al 50 ", h("b", { class: "up", text: rumboText(sg.rumbo) })) : null,
-      h("span", null, h("b", { text: (index + 1) + "/" + state.view.length })));
+      h("span", null, h("b", { text: (index + 1) + "/" + state.view.length })),
+      ...giroDetail(it.giro));
   }
   function drawBig(it, index) {
     const tf = state.vtf, el = $("big");
@@ -1293,10 +1304,10 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   const API = {
     spot: { nombre: "Spot", bases: ["https://api.binance.com", "https://data-api.binance.vision"], info: "/api/v3/exchangeInfo",
       klines: "/api/v3/klines", ticker: "/api/v3/ticker/24hr", price: "/api/v3/ticker/price", limit: 6000,
-      infoW: 20, tickerW: 80, priceW: 4, klinesW: () => 2 },
+      infoW: 20, tickerW: 80, priceW: 4, klinesW: () => 2, depth: "/api/v3/depth", depthLimit: 1000, depthW: 50 },
     futures: { nombre: "Futures USDⓈ-M", bases: ["https://fapi.binance.com"], info: "/fapi/v1/exchangeInfo",
       klines: "/fapi/v1/klines", ticker: "/fapi/v1/ticker/24hr", price: "/fapi/v1/ticker/price", limit: 2400,
-      infoW: 1, tickerW: 40, priceW: 2,
+      infoW: 1, tickerW: 40, priceW: 2, depth: "/fapi/v1/depth", depthLimit: 500, depthW: 10,
       klinesW: (n) => (n < 100 ? 1 : n < 500 ? 2 : n <= 1000 ? 5 : 10) },
   };
   class ScanError extends Error {
@@ -1561,6 +1572,185 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const i = closes.length - 1;
     return f[i] < m[i] || f[i - 1] < m[i - 1];
   }
+  // ---------- índice de giro v1 (experimental) ----------
+  // Las mismas cuatro señales, signos y cuenta que INDEX_V1 en momento_a/giro.py, donde se prueban con el
+  // historial del seguimiento (workflow Indicador). Solo con velas 1D, con las que se probó, y para las monedas
+  // que cumplen los filtros al escanear. Cada señal se ordena entre esas monedas (0 la más baja, 1 la más
+  // alta; al revés en las de signo −1) y el índice es la media de las señales que tenga la moneda, de 0 a 100.
+  const GIRO_V1 = { minimo_mas_alto: 1, long_short: 1, acumulacion: 1, flujo_tendencia: -1 };
+  const GIRO_HOURS = 200;  // velas de 1 hora: los 7 días de las señales de flujo, con margen
+  const HOUR_MS = 3600e3, DAY_MS = 86400e3;
+  const isNum = (v) => typeof v === "number" && isFinite(v);
+  const change = (a, b) => (a == null || !b ? null : (a - b) / b * 100);
+  // Mínimo más alto: el mínimo de los 5 últimos días (con el de hoy) frente al de los 15 anteriores.
+  function giroDaily(rows) {
+    if (rows.length < 21) return null;
+    const low = (part) => Math.min(...part.map((k) => k[3]));
+    return change(low(rows.slice(-5)), low(rows.slice(-20, -5)));
+  }
+  // Flujo comprador con las velas de 1 hora cerradas antes de t: k[5] volumen, k[9] compras a mercado.
+  function giroHourly(raw, t, price) {
+    const hours = raw.filter((k) => Number(k[6]) < t);
+    const day = hours.filter((k) => Number(k[0]) >= t - DAY_MS), week = hours.filter((k) => Number(k[0]) >= t - 7 * DAY_MS);
+    const total = (cs, f) => cs.reduce((sum, k) => sum + f(k), 0);
+    const flow = (cs) => { const v = total(cs, (k) => +k[5]); return v ? total(cs, (k) => +k[9]) / v * 100 : null; };
+    const full = week.length >= 7 * 20, vol = total(week, (k) => +k[5]);
+    const f24 = day.length >= 20 ? flow(day) : null, f7 = full ? flow(week) : null;
+    const cvd = full && vol ? total(week, (k) => 2 * k[9] - k[5]) / vol : null;  // compras − ventas a mercado
+    const price7 = full ? change(price, +week[0][1]) : null;
+    return {
+      flujo_tendencia: f24 == null || f7 == null ? null : f24 - f7,
+      acumulacion: cvd == null || price7 == null ? null : cvd > 0 && price7 < 0 ? 1 : 0,
+    };
+  }
+  // Ratio long/short de cuentas de futuros, el de la última hora. Una petición por moneda y sin reintentos:
+  // si Binance no lo da (o el navegador no puede pedirlo), el índice sigue con las otras señales.
+  let longShortDown = 0;
+  async function giroLongShort(symbol, signal, t) {
+    const listed = pairCache.futures;
+    if (listed && !listed.symbols.some((s) => s.symbol === symbol)) return null;  // sin contrato perpetuo
+    if (Date.now() - longShortDown < 600e3) return null;
+    const api = new BinanceApi("futures", signal);
+    await api.reserve(1);
+    const qs = new URLSearchParams({ symbol, period: "1h", limit: 3 });
+    let res;
+    try {
+      res = await api.request((workingBase.futures || API.futures.bases[0]) + "/futures/data/globalLongShortAccountRatio?" + qs, STALL_MS);
+    } catch (err) {
+      api.checkStop();
+      longShortDown = Date.now();
+      return null;
+    }
+    if (!res.ok) {
+      if (res.status !== 400) longShortDown = Date.now();  // 400: el par no tiene futuros
+      return null;
+    }
+    const last = (Array.isArray(res.body) ? res.body : []).map((p) => [Number(p.timestamp), num(p.longShortRatio)])
+      .filter(([ts, v]) => ts <= t && v != null).pop();
+    return last && t - last[0] <= 2 * HOUR_MS ? last[1] : null;
+  }
+  // Señales de una moneda (rows: sus velas 1D del escaneo, la última en curso).
+  async function giroSignals(key, api, symbol, rows, signal) {
+    const t = Date.now(), cfg = API[key];
+    const out = { v: 1, minimo_mas_alto: giroDaily(rows), long_short: null, acumulacion: null, flujo_tendencia: null };
+    try {
+      const raw = await api.get(cfg.klines, { symbol, interval: "1h", limit: GIRO_HOURS }, cfg.klinesW(GIRO_HOURS));
+      Object.assign(out, giroHourly(raw, t, rows[rows.length - 1][4]));
+    } catch (err) {
+      if (err.fatal) throw err;
+    }
+    out.long_short = await giroLongShort(symbol, signal, t);
+    return out;
+  }
+  // Posición de cada valor entre los demás, de 0 a 1 (empates en el medio): day_percentiles en giro.py.
+  function percentiles(values) {
+    const out = values.map(() => null);
+    const idx = values.map((v, i) => i).filter((i) => isNum(values[i])).sort((a, b) => values[a] - values[b]);
+    if (idx.length === 1) out[idx[0]] = 0.5;
+    for (let i = 0; idx.length > 1 && i < idx.length;) {
+      let j = i;
+      while (j + 1 < idx.length && values[idx[j + 1]] === values[idx[i]]) j++;
+      for (let k = i; k <= j; k++) out[idx[k]] = (i + j) / 2 / (idx.length - 1);
+      i = j + 1;
+    }
+    return out;
+  }
+  function giroScores(items) {
+    const names = Object.keys(GIRO_V1);
+    const per = names.map((n) => percentiles(items.map((it) => it.giro[n])));
+    items.forEach((it, i) => {
+      let sum = 0, count = 0;
+      names.forEach((n, j) => {
+        const p = per[j][i];
+        if (p != null) { sum += GIRO_V1[n] > 0 ? p : 1 - p; count++; }
+      });
+      const g = it.giro;
+      if (!count) { delete it.giro; return; }
+      g.indice = Math.round(sum / count * 100);
+      // Lo que se guarda en el seguimiento, con los decimales justos.
+      for (const [n, d] of [["minimo_mas_alto", 2], ["long_short", 4], ["flujo_tendencia", 3]]) if (isNum(g[n])) g[n] = +g[n].toFixed(d);
+    });
+  }
+  function cleanGiro(g) {
+    if (!g || typeof g !== "object" || !isNum(g.indice)) return null;
+    const out = { v: isNum(g.v) ? g.v : 1, indice: g.indice };
+    for (const n of Object.keys(GIRO_V1)) if (isNum(g[n])) out[n] = g[n];
+    return out;
+  }
+  const giroValue = (it) => (it.giro && isNum(it.giro.indice) ? it.giro.indice : -1);
+  const giroLevel = (n) => (n >= 67 ? "alto" : n <= 33 ? "bajo" : "medio");
+  // Lo que vale cada señal, en palabras.
+  function giroParts(g) {
+    const none = "sin datos";
+    return [
+      ["Mínimo más alto", isNum(g.minimo_mas_alto) ? fmtPct(g.minimo_mas_alto) : none, "mínimo de 5 días frente al de los 15 anteriores"],
+      ["Long/short", isNum(g.long_short) ? fmtNum(g.long_short) : none, "cuentas en largo por cada una en corto, en futuros"],
+      ["Acumulación", isNum(g.acumulacion) ? (g.acumulacion ? "sí" : "no") : none, "más compras que ventas a mercado en 7 días con el precio bajando"],
+      ["Compras 24 h", isNum(g.flujo_tendencia) ? (g.flujo_tendencia >= 0 ? "+" : "") + fmtNum(g.flujo_tendencia) + " pts" : none,
+        "% de compras a mercado de 24 h frente al de 7 días; cuenta a favor que baje"],
+    ];
+  }
+  function giroTitle(g) {
+    return "Índice de giro v1 (experimental): " + g.indice + " de 100. Compara la moneda con las demás que cumplían los filtros al " +
+      "escanear en cuatro señales que, en el historial del seguimiento, acompañaron a las que subieron +20 % antes de caer −10 %:\n" +
+      giroParts(g).map(([name, value, what]) => "· " + name + ": " + value + " (" + what + ")").join("\n") +
+      "\nEs una prueba con pocos datos, no una señal de compra.";
+  }
+  function giroTag(g) {
+    if (!g || !isNum(g.indice)) return null;
+    return h("span", { class: "giro " + giroLevel(g.indice), title: giroTitle(g), text: "Giro " + g.indice });
+  }
+  // En el visor, también el detalle (en el móvil no hay título al pasar el ratón).
+  function giroDetail(g) {
+    const tag = giroTag(g);
+    if (!tag) return [];
+    return [tag, h("span", { class: "giro-detail" }, ...giroParts(g).flatMap(([name, value], i) => [i ? " · " : "", name + " ", h("b", { text: value })]))];
+  }
+  // ---------- libro de órdenes (fase 2) ----------
+  // Se guarda en el seguimiento para probar con el workflow Indicador si anuncia giros; todavía no cuenta en el
+  // índice ni se muestra. Una foto del libro al escanear: USDT en órdenes de compra y de venta a ±1, 2 y 5 % del
+  // precio medio, el spread y la orden más grande de cada lado a menos del 5 %. Una banda solo se guarda si el
+  // libro descargado llega hasta su borde (o es el libro entero): si no, faltarían órdenes.
+  function bookSummary(book, limit) {
+    const side = (levels) => (Array.isArray(levels) ? levels : []).map(([p, q]) => [+p, +q]).filter(([p, q]) => p > 0 && q >= 0);
+    const bids = side(book && book.bids), asks = side(book && book.asks);
+    if (!bids.length || !asks.length) return null;
+    const mid = (bids[0][0] + asks[0][0]) / 2;
+    const out = { v: 1, spread: +((asks[0][0] - bids[0][0]) / mid * 100).toFixed(4) };
+    const inside = (levels, edge, buy) => levels.filter(([p]) => (buy ? p >= edge : p <= edge));
+    const reaches = (levels, edge, buy) => levels.length < limit || (buy ? levels[levels.length - 1][0] <= edge : levels[levels.length - 1][0] >= edge);
+    for (const pct of [1, 2, 5]) {
+      for (const [name, levels, buy] of [["compras_", bids, true], ["ventas_", asks, false]]) {
+        const edge = mid * (1 + (buy ? -pct : pct) / 100);
+        if (reaches(levels, edge, buy)) out[name + pct] = Math.round(inside(levels, edge, buy).reduce((sum, [p, q]) => sum + p * q, 0));
+      }
+    }
+    for (const [name, levels, buy] of [["muro_compra", bids, true], ["muro_venta", asks, false]]) {
+      const near = inside(levels, mid * (1 + (buy ? -5 : 5) / 100), buy);
+      if (!near.length) continue;
+      const [p, q] = near.reduce((best, l) => (l[0] * l[1] > best[0] * best[1] ? l : best));
+      out[name] = Math.round(p * q);
+      out[name + "_dist"] = +((p - mid) / mid * 100).toFixed(3);
+    }
+    return out;
+  }
+  async function bookOf(key, api, symbol) {
+    const cfg = API[key];
+    try {
+      return bookSummary(await api.get(cfg.depth, { symbol, limit: cfg.depthLimit }, cfg.depthW), cfg.depthLimit);
+    } catch (err) {
+      if (err.fatal) throw err;
+      return null;
+    }
+  }
+  const BOOK_FIELDS = ["v", "spread", "compras_1", "ventas_1", "compras_2", "ventas_2", "compras_5", "ventas_5",
+    "muro_compra", "muro_compra_dist", "muro_venta", "muro_venta_dist"];
+  function cleanBook(b) {
+    if (!b || typeof b !== "object" || !isNum(b.spread)) return null;
+    const out = {};
+    for (const n of BOOK_FIELDS) if (isNum(b[n])) out[n] = b[n];
+    return out;
+  }
   const isStockTags = (tags) => (tags || []).some((t) => typeof t === "string" && t.toLowerCase().includes("stock"));
   // Lista de acciones tokenizadas (bStocks), una vez por hora como mucho: 1) la copia publicada junto a la web
   // (bstocks.json, el workflow Web la renueva cada día); 2) la lista de productos de Binance, que su web no
@@ -1653,18 +1843,22 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
 
     // 2) Gráfico completo en la temporalidad del escaneo para las que cumplen los filtros ahora. Las demás
     // temporalidades (y las monedas que entren al cambiar los filtros) se piden al mostrarse cada tarjeta.
-    const crit = criteria(), now = Date.now();
+    // Con velas 1D, también las señales del índice de giro de esas monedas; si se guardan en el seguimiento, su libro de órdenes.
+    const crit = criteria(), now = Date.now(), giroOn = opts.interval === "1d", bookOn = !!opts.track;
+    const extras = ["gráficos", giroOn ? "índice de giro" : null, bookOn ? "libro de órdenes" : null].filter(Boolean);
+    const doing = extras.slice(0, -1).join(", ") + (extras.length > 1 ? " y " : "") + extras[extras.length - 1];
     const matches = found.filter((m) => evaluateItem({ velas: m.rows, intervalo: opts.interval, volumen_24h: m.c.volume }, crit, now));
     let charted = 0;
     try {
       await runPool(matches, 6, async (m) => {
         try {
-          const rows = await api.get(cfg.klines, { symbol: m.c.info.symbol, interval: opts.interval, limit: CHART_LIMIT }, cfg.klinesW(CHART_LIMIT));
+          const rows = await api.get(cfg.klines, { symbol: m.c.info.symbol, interval: opts.interval, limit: CHART_LIMIT }, cfg.klinesW(CHART_LIMIT))
+            .catch((err) => { if (err.fatal) throw err; return []; });
           if (rows.length) m.chart = rows.map(row);
-        } catch (err) {
-          if (err.fatal) throw err;
+          if (giroOn) m.giro = await giroSignals(key, api, m.c.info.symbol, m.rows, signal);
+          if (bookOn) m.libro = await bookOf(key, api, m.c.info.symbol);
         } finally {
-          report(cfg.nombre + ": gráficos " + (++charted) + "/" + matches.length);
+          report(cfg.nombre + ": " + doing + " " + (++charted) + "/" + matches.length);
         }
       });
     } catch (err) {
@@ -1672,11 +1866,11 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       notes.push("faltan gráficos (" + err.message + "); se piden al verlos");
     }
 
-    const coincidencias = found.map(({ c, rows, chart }) => ({
+    const coincidencias = found.map(({ c, rows, chart, giro, libro }) => Object.assign({
       mercado: key, intervalo: opts.interval, simbolo: c.info.symbol, base: c.info.baseAsset, quote: c.info.quoteAsset,
       precio: rows[rows.length - 1][4], var_24h_pct: c.change, volumen_24h: c.volume,
       velas: chart || rows, graficos: {}, fresco: !!chart,
-    }));
+    }, giro ? { giro } : null, libro ? { libro } : null));
     return { market: { nombre: cfg.nombre, quote: opts.quote, analizadas: analyzed, coincidencias }, notes };
   }
   let scanController = null;
@@ -1710,6 +1904,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     if (aborted) { status.textContent = "Escaneo detenido."; return; }
     const done = "Escaneo terminado a las " + timeOf(new Date().toISOString()) + ".";
     status.textContent = done;
+    // Índice de giro: cada moneda frente a las demás que cumplían los filtros, de los dos mercados.
+    giroScores(Object.values(mercados).flatMap((mk) => mk.coincidencias.filter((it) => it.giro)));
     if (Object.keys(mercados).length) {
       const tfs = [...new Set([...CHART_TFS, opts.interval])].sort((a, b) => (TF_MINUTES[a] || 0) - (TF_MINUTES[b] || 0));
       setData({
@@ -1758,6 +1954,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     maximo: (a, b) => (b.maxPct ?? -Infinity) - (a.maxPct ?? -Infinity),
     minimo: (a, b) => (a.minPct ?? Infinity) - (b.minPct ?? Infinity),
     rumbo: (a, b) => (a.rumbo ? a.rumbo.dias : Infinity) - (b.rumbo ? b.rumbo.dias : Infinity) || (b.maxPct ?? -Infinity) - (a.maxPct ?? -Infinity),
+    giro: (a, b) => giroValue(b) - giroValue(a),
     moneda: (a, b) => a.simbolo.localeCompare(b.simbolo),
     escaneo: (a, b) => a.orden - b.orden,
   };
@@ -1832,6 +2029,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   }
   function cleanCoin(c) {
     const out = { mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c.precio, hora: c.hora, intervalo: c.intervalo };
+    const giro = cleanGiro(c.giro), libro = cleanBook(c.libro);
+    if (giro) out.giro = giro;
+    if (libro) out.libro = libro;
     if (c.estrella_hora) Object.assign(out, { estrella: !!c.estrella, estrella_hora: c.estrella_hora });
     return out;
   }
@@ -1869,7 +2069,8 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   // hora: la del escaneo (ISO); el precio es el de ese momento, aunque los gráficos ya lo hayan actualizado.
   function recordScan(items, interval, hora) {
     const fecha = candleDayOf(hora, todayKey());
-    const monedas = items.map((c) => ({ mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c._precio ?? c.precio, hora, intervalo: interval }));
+    const monedas = items.map((c) => cleanCoin({ mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c._precio ?? c.precio,
+      hora, intervalo: interval, giro: c.giro, libro: c.libro }));
     if (!monedas.length) return null;
     const days = localDays();
     days[fecha] = Object.assign(mergeDay(days[fecha], { fecha, monedas }), { pendiente: true });
@@ -2247,7 +2448,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       const cls = [c.estrella ? "starred" : "", c.rumbo ? "hit50" : ""].filter(Boolean).join(" ") || null;
       const tr = h("tr", { tabindex: "0", class: cls, "data-key": coinKey(c), "data-fecha": fecha, title: "Ver el gráfico de " + c.simbolo },
         h("td", { class: "c-coin" }, star, h("span", { class: "coin" }, c.base || c.simbolo, h("small", { text: c.quote ? "/" + c.quote : "" })),
-          h("span", { class: "badge", text: MARKET_NAMES[c.mercado] || c.mercado })),
+          h("span", { class: "badge", text: MARKET_NAMES[c.mercado] || c.mercado }), giroTag(c.giro)),
         day ? null : h("td", { class: "c-day muted", text: dayTitle(fecha) }),
         h("td", { class: "r num c-then", "data-label": shortDate(fecha), text: fmtPrice(c.precio) }),
         h("td", { class: "r num c-now", "data-label": "ahora", text: c.ahora == null ? "—" : fmtPrice(c.ahora) }),
@@ -2396,7 +2597,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     state.tf = state.tf || DEFAULT_TF;
     state.view = coins.map((c) => ({
       mercado: c.mercado, simbolo: c.simbolo, base: c.base, quote: c.quote, precio: c.ahora == null ? c.precio : c.ahora,
-      var_24h_pct: null, vela_pct: null, vs_ma7_pct: null, ma7_vs_ma25_pct: null, vs_ma99_pct: null, velas_sobre_ma7: null,
+      var_24h_pct: null, vela_pct: null, vs_ma7_pct: null, ma7_vs_ma25_pct: null, vs_ma99_pct: null, velas_sobre_ma7: null, giro: c.giro,
       _seguimiento: { fecha: c.fecha || day.fecha, precio: c.precio, hora: c.hora, min: c.min, max: c.max, minPct: c.minPct, maxPct: c.maxPct, rumbo: c.rumbo },
     }));
     openViewer(index);

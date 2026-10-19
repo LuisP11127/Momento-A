@@ -19,6 +19,14 @@ from .report import render_report
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 COIN_FIELDS = ("mercado", "simbolo", "base", "quote", "precio", "hora", "intervalo")
 STAR_FIELDS = ("estrella", "estrella_hora")  # solo en las monedas a las que alguna vez se puso estrella
+GIRO_FIELDS = ("v", "indice", "minimo_mas_alto", "long_short", "acumulacion", "flujo_tendencia")  # índice de giro al escanear
+BOOK_FIELDS = ("v", "spread", "compras_1", "ventas_1", "compras_2", "ventas_2", "compras_5", "ventas_5",
+               "muro_compra", "muro_compra_dist", "muro_venta", "muro_venta_dist")  # libro de órdenes al escanear
+
+
+def numbers(data, fields) -> dict:
+    """Los campos de ``fields`` que son números."""
+    return {k: data[k] for k in fields if isinstance(data.get(k), (int, float)) and not isinstance(data.get(k), bool)}
 
 
 def collect_tracking(folder: Path) -> list[dict]:
@@ -47,6 +55,11 @@ def collect_tracking(folder: Path) -> list[dict]:
             if not (isinstance(coin, dict) and coin.get("mercado") and coin.get("simbolo")):
                 continue
             item = {field: coin.get(field) for field in COIN_FIELDS}
+            giro, book = coin.get("giro"), coin.get("libro")
+            if isinstance(giro, dict) and isinstance(giro.get("indice"), (int, float)):
+                item["giro"] = numbers(giro, GIRO_FIELDS)
+            if isinstance(book, dict) and isinstance(book.get("spread"), (int, float)):
+                item["libro"] = numbers(book, BOOK_FIELDS)
             if coin.get("estrella_hora"):
                 item.update(estrella=bool(coin.get("estrella")), estrella_hora=coin["estrella_hora"])
             coins.append(item)

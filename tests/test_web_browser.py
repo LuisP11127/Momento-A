@@ -23,6 +23,8 @@ import pytest
 
 sync_api = pytest.importorskip("playwright.sync_api")
 
+from momento_a.binance import Candle  # noqa: E402
+from momento_a.giro import INDEX_V1, Entry, SymbolData, features, index_scores  # noqa: E402
 from momento_a.web import main as build_site  # noqa: E402
 
 STEP = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "30m": 1_800_000, "1h": 3_600_000, "2h": 7_200_000,
@@ -74,11 +76,16 @@ def trend_klines(kind: str, tf: str, limit: int, end: int | None = None, listed:
 
 class Binance:
     """Mercados simulados. kinds: símbolo → tipo de velas; fail: símbolo → fallo («hang» la primera vez,
-    «500» la primera vez, «429» la primera vez, «dead» siempre 500)."""
+    «500» la primera vez, «429» la primera vez, «dead» siempre 500); long_short: símbolo de futuros → ratio
+    long/short de cuentas (los demás, como en Binance, 400); books: símbolo → libro de órdenes (por defecto,
+    uno pequeño)."""
 
-    def __init__(self, spot: dict, futures: dict, fail: dict | None = None, klines=None, price=None, listed=None):
+    def __init__(self, spot: dict, futures: dict, fail: dict | None = None, klines=None, price=None, listed=None,
+                 long_short=None, books=None):
         self.kinds = {"spot": spot, "futures": futures}
         self.fail = fail or {}
+        self.long_short = long_short or {}
+        self.books = books or {}
         self.listed = listed or {}
         self.klines = klines or (lambda market, sym, tf, limit, start, end: trend_klines(
             self.kinds[market].get(sym, "up"), tf, limit, end, self.listed.get(sym)))
@@ -115,6 +122,14 @@ class Binance:
             start = int(q["startTime"]) if "startTime" in q else None
             end = int(q["endTime"]) if "endTime" in q else None
             body = self.klines(market, sym, q["interval"], min(int(q["limit"]), 1000), start, end)
+        elif url.path.endswith("/depth"):
+            body = self.books.get(sym) or {"bids": [["9.9", "10"], ["9.8", "20"]], "asks": [["10.1", "10"], ["10.2", "5"]]}
+        elif url.path.endswith("/globalLongShortAccountRatio") and market == "futures":
+            if sym not in self.long_short:
+                return route.fulfill(status=400, body='{"code": -1121, "msg": "Invalid symbol."}', headers=CORS)
+            hour = now_ms() // 3_600_000 * 3_600_000
+            body = [{"symbol": sym, "longShortRatio": str(self.long_short[sym] - 0.1), "timestamp": hour - 3_600_000},
+                    {"symbol": sym, "longShortRatio": str(self.long_short[sym]), "timestamp": hour}]
         else:
             return route.fulfill(status=404, body="{}", headers=CORS)
         return route.fulfill(status=200, content_type="application/json", body=json.dumps(body), headers=CORS)
@@ -246,6 +261,7 @@ def test_scan_survives_hanging_failing_and_limited_requests(open_page):
     scan(page)
     assert sorted(cards(page)) == ["FA", "FLAKY", "HANG", "LIMIT", "SA"]  # sin STOCK (bStocks) ni las alcistas
     assert "1 par no respondió" in page.text_content("#notice")
+    assert not [c for c in binance.calls if c[1].endswith("/depth")]  # sin «Guardar en seguimiento», sin libro de órdenes
     # Durante el escaneo solo se baja el gráfico completo de su temporalidad; el resto, al ver cada tarjeta.
     charts = {c[3] for c in binance.calls if c[1].endswith("/klines") and c[4] == "299"}
     assert "1d" in charts
@@ -532,4 +548,124 @@ def test_section_of_coins_that_reached_50_with_starred_first(open_page):
     page.click("#track-view button:has-text('Llegaron al +50%')")
     page.reload()
     page.wait_for_selector(".day.hits")
+    assert page.errors == []
+
+
+def test_giro_index_matches_the_python_test_and_is_saved_in_tracking(open_page):
+    """El índice de giro de la web sale igual que el de momento_a.giro con las mismas velas: AAA (spot y futuros)
+    y DDD tienen ratio long/short; BBB y CCC no tienen futuros. Las señales varían de una moneda a otra."""
+    hour = 3_600_000
+    spec = {  # dip: mínimo de 4 días cerrados; compras a mercado antes y en las últimas 30 h; precio hace 7 días
+        "AAAUSDT": {"dip": 0.97, "old": 0.60, "new": 0.52, "before": 1.10},
+        "BBBUSDT": {"dip": 1.00, "old": 0.45, "new": 0.55, "before": 1.10},
+        "CCCUSDT": {"dip": 0.90, "old": 0.55, "new": 0.50, "before": 0.90},
+        "DDDUSDT": {"dip": 0.95, "old": 0.50, "new": 0.62, "before": 1.10},
+    }
+    served = {}  # (mercado, símbolo, temporalidad) → velas que dio Binance (las de más velas)
+
+    def klines(market, sym, tf, limit, start, end):
+        out = trend_klines("match" if sym in spec else "up", tf, limit, end)
+        if sym in spec and tf == "1d":
+            for k in out[-5:-1]:  # el mínimo de los últimos días cerrados (la vela en curso no cambia)
+                k[3] = str(float(k[3]) * spec[sym]["dip"])
+        if sym in spec and tf == "1h":
+            # Velas de 1 hora: hoy, al precio del escaneo; antes, al de hace 7 días. Volumen 1000; compras a mercado
+            # según la parte de las últimas 30 horas o la anterior.
+            price = float(trend_klines("match", "1d", 1)[-1][4])
+            day0, now_last = now_ms() // STEP["1d"] * STEP["1d"], now_ms() // hour
+            out = []
+            for i in range(now_last - limit + 1, now_last + 1):
+                p = price if i * hour >= day0 else price * spec[sym]["before"]
+                share = spec[sym]["new"] if i > now_last - 30 else spec[sym]["old"]
+                out.append([i * hour, str(p), str(p), str(p), str(p), "1000", i * hour + hour - 1, str(p * 1000), 10,
+                            str(1000 * share), str(p * 1000 * share), "0"])
+        key = (market, sym, tf)
+        if len(out) >= len(served.get(key, [])):
+            served[key] = out
+        return out
+
+    binance = Binance(spot={"AAAUSDT": "match", "BBBUSDT": "match", "CCCUSDT": "match", "BTCUSDT": "up"},
+                      futures={"AAAUSDT": "match", "DDDUSDT": "match"}, klines=klines,
+                      long_short={"AAAUSDT": 2.2, "DDDUSDT": 1.3})
+    page = open_page(binance)
+    scan(page)
+    shown = dict(page.eval_on_selector_all("#grid .card", "cs => cs.map(c => [c.dataset.key, c.querySelector('.giro').textContent])"))
+    assert sorted(shown) == ["futures:AAAUSDT", "futures:DDDUSDT", "spot:AAAUSDT", "spot:BBBUSDT", "spot:CCCUSDT"]
+    asked = {c[2] for c in binance.calls if c[1].endswith("/globalLongShortAccountRatio")}
+    assert asked == {"AAAUSDT", "DDDUSDT"}  # solo las que tienen contrato perpetuo
+
+    # Lo mismo con momento_a.giro, con las velas que dio Binance y la hora y el precio guardados en el seguimiento.
+    (day,) = local_days(page).values()
+    saved = {c["mercado"] + ":" + c["simbolo"]: c for c in day["monedas"]}
+    assert sorted(saved) == sorted(shown)
+    rows = []
+    for key, c in saved.items():
+        market, sym = key.split(":")
+        t = int(datetime.fromisoformat(c["hora"].replace("Z", "+00:00")).timestamp() * 1000)
+        candles = lambda tf: [Candle.from_kline(k) for k in served[(market, sym, tf)]]
+        ls = binance.long_short.get(sym)
+        data = SymbolData(hourly=candles("1h"), daily=candles("1d"),
+                          long_short=[] if ls is None else [(t // hour * hour, ls)])
+        f = features(Entry(day["fecha"], market, sym, c["precio"], t), data)
+        g = c["giro"]
+        assert g["minimo_mas_alto"] == pytest.approx(f["minimo_mas_alto"], abs=0.006), key
+        assert g["flujo_tendencia"] == pytest.approx(f["flujo_tendencia"], abs=0.15), key
+        assert g["acumulacion"] == f["acumulacion"] and g.get("long_short") == f["long_short"], key
+        rows.append({"fecha": day["fecha"], "key": key, "senales": f})
+    for row, expected in zip(rows, index_scores(rows, INDEX_V1)):
+        assert abs(saved[row["key"]]["giro"]["indice"] - expected) <= 0.5 + 1e-9, row["key"]
+        assert shown[row["key"]] == f"Giro {saved[row['key']]['giro']['indice']}"
+    assert {saved[k]["giro"]["acumulacion"] for k in saved} == {0, 1}  # las señales de verdad cambian entre monedas
+    assert len({saved[k]["giro"]["indice"] for k in saved}) >= 3
+
+    # Orden por el índice, detalle en el visor y columna del seguimiento.
+    page.select_option("#sort", "giro")
+    order = page.eval_on_selector_all("#grid .card .giro", "gs => gs.map(g => +g.textContent.replace('Giro ', ''))")
+    assert order == sorted(order, reverse=True)
+    page.click('#grid .card[data-key="spot:BBBUSDT"]')
+    stats = page.text_content("#v-stats")
+    assert "Long/short sin datos" in stats and "Acumulación no" in stats and "Compras 24 h +" in stats
+    page.keyboard.press("Escape")
+    page.click("#views button[data-view='track']")
+    page.wait_for_selector("#track-days .day:first-child tbody tr .giro")
+    tags = page.eval_on_selector_all("#track-days .day:first-child tbody tr", "rs => rs.map(r => [r.dataset.key, r.querySelector('.giro').textContent])")
+    assert dict(tags) == shown
+    assert page.errors == []
+
+
+def test_no_giro_index_with_other_candles(open_page):
+    """El índice se probó con velas 1D: con otras temporalidades no se calcula ni se piden sus datos."""
+    binance = Binance(spot={"SAUSDT": "match"}, futures={"FAUSDT": "match"})
+    page = open_page(binance, storage={"scan": {"market": "ambos", "interval": "4h", "track": True}})
+    scan(page)
+    assert sorted(cards(page)) == ["FA", "SA"] and page.locator("#grid .giro").count() == 0
+    assert not [c for c in binance.calls if c[3] == "1h" or c[1].endswith("/globalLongShortAccountRatio")]
+    assert all("giro" not in c for day in local_days(page).values() for c in day["monedas"])
+    assert page.errors == []
+
+
+def test_order_book_summary_is_saved_with_each_coin(open_page):
+    """En cada escaneo que se guarda, un resumen del libro de órdenes de cada moneda: USDT en compras y ventas a ±1, 2
+    y 5 % del precio medio, spread y la orden más grande de cada lado. En FA el libro descargado (500 niveles, el
+    máximo que se pide en futuros) no llega al −2 %: esas bandas no se guardan."""
+    sa = {"bids": [["100", "10"], ["99.5", "20"], ["98.5", "6"], ["96", "100"], ["90", "1000"]],
+          "asks": [["100.2", "10"], ["101", "50"], ["101.5", "2"], ["104", "10"], ["120", "500"]]}
+    fa = {"bids": [[f"{100 - i * 0.003:.3f}", "1"] for i in range(500)], "asks": [["100.01", "1"], ["101", "1"]]}
+    binance = Binance(spot={"SAUSDT": "match"}, futures={"FAUSDT": "match"}, books={"SAUSDT": sa, "FAUSDT": fa})
+    page = open_page(binance)
+    scan(page)
+    assert {(c[0], c[2], c[4]) for c in binance.calls if c[1].endswith("/depth")} == {("spot", "SAUSDT", "1000"), ("futures", "FAUSDT", "500")}
+    coins = {c["simbolo"]: c for day in local_days(page).values() for c in day["monedas"]}
+    # Precio medio 100,1: ±1 % es de 99,099 a 101,101; ±2 %, de 98,098 a 102,102; ±5 %, de 95,095 a 105,105.
+    assert coins["SAUSDT"]["libro"] == {
+        "v": 1, "spread": 0.1998,
+        "compras_1": 2990, "ventas_1": 6052,      # 100×10 + 99,5×20 | 100,2×10 + 101×50
+        "compras_2": 3581, "ventas_2": 6255,      # + 98,5×6 | + 101,5×2
+        "compras_5": 13181, "ventas_5": 7295,     # + 96×100 | + 104×10 (las de 90 y 120 quedan fuera)
+        "muro_compra": 9600, "muro_compra_dist": -4.096, "muro_venta": 5050, "muro_venta_dist": 0.899,
+    }
+    fa_book = coins["FAUSDT"]["libro"]
+    assert "compras_1" in fa_book and "compras_2" not in fa_book and "compras_5" not in fa_book
+    assert {"ventas_1", "ventas_2", "ventas_5"} <= set(fa_book)  # del lado de las ventas está el libro entero
+    assert page.locator("#grid .card").count() == 2 and "libro" not in page.text_content("#grid").lower()
     assert page.errors == []
