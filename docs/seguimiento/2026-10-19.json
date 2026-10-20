@@ -297,6 +297,37 @@
    "precio": 0.3,
    "hora": "2026-10-20T07:33:21.499Z",
    "intervalo": "1d"
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "RIVERUSDT",
+   "base": "RIVER",
+   "quote": "USDT",
+   "precio": 1.043,
+   "hora": "2026-10-20T07:34:45.021Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 77,
+    "minimo_mas_alto": 6.65,
+    "long_short": 2.651,
+    "acumulacion": 0,
+    "flujo_tendencia": 0.223
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0958,
+    "compras_1": 99170,
+    "ventas_1": 69326,
+    "compras_2": 178233,
+    "ventas_2": 119906,
+    "compras_5": 425070,
+    "ventas_5": 262057,
+    "muro_compra": 27612,
+    "muro_compra_dist": -1.39,
+    "muro_venta": 13743,
+    "muro_venta_dist": 4.744
+   }
   }
  ]
 }
