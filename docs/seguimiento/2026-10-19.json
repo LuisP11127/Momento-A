@@ -666,7 +666,9 @@
     "muro_compra_dist": -1.747,
     "muro_venta": 8300,
     "muro_venta_dist": 1.747
-   }
+   },
+   "estrella": true,
+   "estrella_hora": "2026-10-20T16:53:47.397Z"
   },
   {
    "mercado": "spot",
