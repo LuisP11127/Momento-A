@@ -1727,6 +1727,130 @@
     "muro_venta": 15499,
     "muro_venta_dist": 4.298
    }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "HEMIUSDT",
+   "base": "HEMI",
+   "quote": "USDT",
+   "precio": 0.0052,
+   "hora": "2026-10-20T21:27:45.713Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 53,
+    "minimo_mas_alto": -2,
+    "long_short": 1.2609,
+    "acumulacion": 0,
+    "flujo_tendencia": -4.61
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.1921,
+    "compras_1": 34473,
+    "ventas_1": 41955,
+    "compras_2": 58283,
+    "ventas_2": 69846,
+    "compras_5": 71505,
+    "ventas_5": 86994,
+    "muro_compra": 11067,
+    "muro_compra_dist": -1.825,
+    "muro_venta": 16586,
+    "muro_venta_dist": 0.865
+   }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "MANTRAUSDT",
+   "base": "MANTRA",
+   "quote": "USDT",
+   "precio": 0.00398,
+   "hora": "2026-10-20T21:27:45.713Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 45,
+    "minimo_mas_alto": -2.35,
+    "long_short": 1.3375,
+    "acumulacion": 0,
+    "flujo_tendencia": 0.45
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.2509,
+    "compras_1": 24571,
+    "ventas_1": 12723,
+    "compras_2": 41072,
+    "ventas_2": 21594,
+    "compras_5": 48530,
+    "ventas_5": 28963,
+    "muro_compra": 12799,
+    "muro_compra_dist": -0.878,
+    "muro_venta": 4608,
+    "muro_venta_dist": 0.376
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "MUSDT",
+   "base": "M",
+   "quote": "USDT",
+   "precio": 0.7705,
+   "hora": "2026-10-20T21:27:45.713Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 59,
+    "minimo_mas_alto": -14.22,
+    "long_short": 2.0358,
+    "acumulacion": 1,
+    "flujo_tendencia": -2.846
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.026,
+    "compras_1": 30828,
+    "ventas_1": 23459,
+    "compras_2": 49191,
+    "ventas_2": 34144,
+    "compras_5": 75846,
+    "ventas_5": 49986,
+    "muro_compra": 4175,
+    "muro_compra_dist": -2.673,
+    "muro_venta": 4000,
+    "muro_venta_dist": 2.829
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "CYSUSDT",
+   "base": "CYS",
+   "quote": "USDT",
+   "precio": 0.1201,
+   "hora": "2026-10-20T21:27:45.713Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 47,
+    "minimo_mas_alto": -11.99,
+    "long_short": 2.4566,
+    "acumulacion": 0,
+    "flujo_tendencia": -0.523
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0832,
+    "compras_1": 35366,
+    "ventas_1": 21530,
+    "compras_2": 83197,
+    "ventas_2": 50613,
+    "compras_5": 157946,
+    "ventas_5": 97138,
+    "muro_compra": 17796,
+    "muro_compra_dist": -0.957,
+    "muro_venta": 5792,
+    "muro_venta_dist": 3.204
+   }
   }
  ]
 }
