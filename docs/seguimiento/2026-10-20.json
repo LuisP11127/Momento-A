@@ -600,6 +600,17 @@
     "muro_venta": 14133,
     "muro_venta_dist": 2.42
    }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "RVNUSDT",
+   "base": "RVN",
+   "quote": "USDT",
+   "precio": 0.001484,
+   "hora": "2026-10-21T16:12:03.011Z",
+   "intervalo": "1d",
+   "estrella": true,
+   "estrella_hora": "2026-10-21T16:14:22.851Z"
   }
  ]
 }
