@@ -1645,6 +1645,17 @@
    "intervalo": "1d",
    "estrella": true,
    "estrella_hora": "2026-10-23T14:05:45.760Z"
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "GENIUSUSDT",
+   "base": "GENIUS",
+   "quote": "USDT",
+   "precio": 0.2999,
+   "hora": "2026-10-23T13:56:55.701Z",
+   "intervalo": "1d",
+   "estrella": true,
+   "estrella_hora": "2026-10-23T14:07:16.864Z"
   }
  ]
 }
