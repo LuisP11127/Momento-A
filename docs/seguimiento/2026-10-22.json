@@ -396,7 +396,9 @@
     "muro_compra_dist": -3.282,
     "muro_venta": 2027,
     "muro_venta_dist": 3.005
-   }
+   },
+   "estrella": true,
+   "estrella_hora": "2026-10-23T14:05:00.765Z"
   },
   {
    "mercado": "spot",
@@ -491,7 +493,9 @@
     "muro_compra_dist": -0.349,
     "muro_venta": 4778,
     "muro_venta_dist": 0.51
-   }
+   },
+   "estrella": true,
+   "estrella_hora": "2026-10-23T14:05:34.094Z"
   },
   {
    "mercado": "spot",
@@ -1628,6 +1632,17 @@
     "muro_venta": 8672,
     "muro_venta_dist": 4.171
    }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "MANTRAUSDT",
+   "base": "MANTRA",
+   "quote": "USDT",
+   "precio": 0.00391,
+   "hora": "2026-10-23T13:56:55.701Z",
+   "intervalo": "1d",
+   "estrella": true,
+   "estrella_hora": "2026-10-23T14:05:45.760Z"
   }
  ]
 }
