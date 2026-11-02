@@ -463,6 +463,9 @@ def test_viewer_loads_the_whole_history(open_page):
     page.mouse.move(2, 2)  # fuera del gráfico: la leyenda es la de la última vela (+5 % de apertura a cierre)
     page.wait_for_timeout(200)
     assert "Var +5.00%" in page.text_content("#v-legend")
+    vol = page.text_content("#v-legend .vol-legend")  # volumen de la vela y sus medias (cada vela tiene 1000)
+    assert "Vol 1.00K" in vol and "MA(5) 1.00K" in vol and "MA(25) 1.00K" in vol
+    assert page.evaluate("() => document.querySelectorAll('#big canvas').length > 0")
     older = lambda: [c for c in binance.calls if c[1].endswith("/klines") and c[5]]
     assert older() == []
     for _ in range(8):  # alejar hasta el borde izquierdo: se piden las anteriores
