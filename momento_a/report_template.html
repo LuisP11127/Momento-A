@@ -523,6 +523,7 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
   function gapToMid(it) { return it.ma7 && it.ma25 ? (it.ma25 - it.ma7) / it.ma7 * 100 : null; }
   function fmtGap(v) { return v == null || !isFinite(v) ? "-" : v.toFixed(2) + "%"; }
   const fmtNum = (v) => String(+Number(v).toFixed(2));
+  const VOL_PERIODS = [5, 25];
   function sma(values, period) {
     const out = new Array(values.length).fill(null);
     let sum = 0;
@@ -588,7 +589,10 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     const raw = periods.map((p) => sma(closes, p));
     const mas = raw.map((arr) => arr.flatMap((v, i) => (v == null ? [] : [{ time: candles[i].time, value: v }])));
     const volume = rows.map((k, i) => ({ time: candles[i].time, value: k[5], up: k[4] >= k[1] }));
-    return (it._sd[tf] = { candles, raw, mas, volume });
+    // Medias del volumen (MA(5) y MA(25)), como en Binance, para las barras del gráfico a pantalla completa.
+    const volRaw = VOL_PERIODS.map((p) => sma(rows.map((k) => k[5]), p));
+    const volMas = volRaw.map((arr) => arr.flatMap((v, i) => (v == null ? [] : [{ time: candles[i].time, value: v }])));
+    return (it._sd[tf] = { candles, raw, mas, volume, volRaw, volMas });
   }
   // Filtros (los mismos criterios que el workflow Scanner): MA7 < MA25 siempre; MA25 < MA99, precio cerca o
   // encima de la MA7, vela verde, volumen y vela cerrada se cambian en la barra «Filtros» y se aplican al momento.
@@ -961,7 +965,9 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
     entry.mas.forEach((s, i) => s.applyOptions({ color: t.ma[i] }));
     if (entry.volume) {
       const alpha = (c) => c + (c.startsWith("#") && c.length === 7 ? "66" : "");
-      entry.volume.setData(seriesData(entry.item, entry.tf).volume.map((v) => ({ time: v.time, value: v.value, color: alpha(v.up ? t.up : t.down) })));
+      const sd = seriesData(entry.item, entry.tf);
+      entry.volume.setData(sd.volume.map((v) => ({ time: v.time, value: v.value, color: alpha(v.up ? t.up : t.down) })));
+      entry.volMas.forEach((serie, i) => { serie.applyOptions({ color: t.ma[i] }); serie.setData(sd.volMas[i]); });
     }
     if (entry.acum) {
       const a = entry.item._acum, rows = rowsFor(entry.item, entry.tf), sd = seriesData(entry.item, entry.tf);
@@ -1016,12 +1022,14 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       s.setData(data);
       return s;
     });
-    let volume = null;
+    let volume = null, volMas = [];
     if (isBig) {
       volume = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol", lastValueVisible: false, priceLineVisible: false });
       chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+      volMas = VOL_PERIODS.map(() => chart.addLineSeries({ priceScaleId: "vol", priceFormat: { type: "volume" }, lineWidth: 1,
+        lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false }));
     }
-    const entry = { chart, candles, mas, volume, acum, item: it, isBig, tf };
+    const entry = { chart, candles, mas, volume, volMas, acum, item: it, isBig, tf };
     if (isBig && it._seguimiento) markTracking(entry, sd, rowsFor(it, tf), t);
     applyColors(entry, t);
     const n = sd.candles.length;
@@ -1095,6 +1103,10 @@ body.dragging .wrap { outline: 2px dashed var(--accent); outline-offset: -8px; }
       const pct = c.open ? (c.close - c.open) / c.open * 100 : null;
       ohlc.append(h("b", { text: "Var " }), h("span", { class: "var " + (pct >= 0 ? "up" : "down"), text: fmtPct(pct) }));
       $("v-legend").prepend(ohlc);
+      // Volumen de la vela y sus medias, con los mismos colores que las líneas sobre las barras.
+      const vol = h("span", { class: "vol-legend" }, h("b", { text: "Vol " }), fmtVol(sd.volume[idx].value));
+      VOL_PERIODS.forEach((p, i) => vol.append("  ", h("b", { class: ["c-fast", "c-mid"][i], text: "MA(" + p + ") " }), fmtVol(sd.volRaw[i][idx])));
+      $("v-legend").append(vol);
     }
   }
   function openViewer(index) {
