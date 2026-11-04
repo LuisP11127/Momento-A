@@ -1,0 +1,667 @@
+{
+ "fecha": "2026-11-03",
+ "monedas": [
+  {
+   "mercado": "spot",
+   "simbolo": "DGBUSDT",
+   "base": "DGB",
+   "quote": "USDT",
+   "precio": 0.00317,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 18,
+    "minimo_mas_alto": -3.82,
+    "acumulacion": 0,
+    "flujo_tendencia": 16.128
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.314,
+    "compras_1": 5875,
+    "ventas_1": 1851,
+    "compras_2": 8980,
+    "ventas_2": 2349,
+    "compras_5": 15218,
+    "ventas_5": 8745,
+    "muro_compra": 2507,
+    "muro_compra_dist": -4.239,
+    "muro_venta": 3320,
+    "muro_venta_dist": 2.983
+   }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "PAXGUSDT",
+   "base": "PAXG",
+   "quote": "USDT",
+   "precio": 4043.37,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 66,
+    "minimo_mas_alto": 0.09,
+    "long_short": 2.7707,
+    "acumulacion": 0,
+    "flujo_tendencia": -0.463
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0002,
+    "compras_1": 437396,
+    "ventas_1": 809582,
+    "compras_2": 500257,
+    "ventas_2": 1266205,
+    "muro_compra": 69353,
+    "muro_compra_dist": -0.646,
+    "muro_venta": 139382,
+    "muro_venta_dist": 1.409
+   }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "REQUSDT",
+   "base": "REQ",
+   "quote": "USDT",
+   "precio": 0.0503,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 47,
+    "minimo_mas_alto": 0.83,
+    "acumulacion": 0,
+    "flujo_tendencia": 3.68
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.199,
+    "compras_1": 1960,
+    "ventas_1": 4736,
+    "compras_2": 17444,
+    "ventas_2": 26268,
+    "compras_5": 54909,
+    "ventas_5": 30161,
+    "muro_compra": 18712,
+    "muro_compra_dist": -2.289,
+    "muro_venta": 18549,
+    "muro_venta_dist": 1.692
+   }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "GNOUSDT",
+   "base": "GNO",
+   "quote": "USDT",
+   "precio": 111.22,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 33,
+    "minimo_mas_alto": -0.35,
+    "acumulacion": 0,
+    "flujo_tendencia": 4.631
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.2339,
+    "compras_1": 3528,
+    "ventas_1": 1892,
+    "compras_2": 6897,
+    "ventas_2": 3788,
+    "compras_5": 8029,
+    "ventas_5": 16494,
+    "muro_compra": 1545,
+    "muro_compra_dist": -0.863,
+    "muro_venta": 3380,
+    "muro_venta_dist": 4.785
+   }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "DYDXUSDT",
+   "base": "DYDX",
+   "quote": "USDT",
+   "precio": 0.10658,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 38,
+    "minimo_mas_alto": -1.44,
+    "long_short": 1.6889,
+    "acumulacion": 0,
+    "flujo_tendencia": 5.299
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0657,
+    "compras_1": 23762,
+    "ventas_1": 15498,
+    "compras_2": 25132,
+    "ventas_2": 83781,
+    "compras_5": 36700,
+    "ventas_5": 102785,
+    "muro_compra": 8234,
+    "muro_compra_dist": -4.681,
+    "muro_venta": 41583,
+    "muro_venta_dist": 1.695
+   }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "NEXOUSDT",
+   "base": "NEXO",
+   "quote": "USDT",
+   "precio": 0.765,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 76,
+    "minimo_mas_alto": 3.43,
+    "acumulacion": 0,
+    "flujo_tendencia": -4.072
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.2618,
+    "compras_1": 26864,
+    "ventas_1": 11521,
+    "compras_2": 109047,
+    "ventas_2": 93131,
+    "compras_5": 121038,
+    "ventas_5": 121219,
+    "muro_compra": 52139,
+    "muro_compra_dist": -1.702,
+    "muro_venta": 53612,
+    "muro_venta_dist": 1.702
+   }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "POLYXUSDT",
+   "base": "POLYX",
+   "quote": "USDT",
+   "precio": 0.03262,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 39,
+    "minimo_mas_alto": -0.26,
+    "long_short": 1.3992,
+    "acumulacion": 0,
+    "flujo_tendencia": 4.322
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0613,
+    "compras_1": 33350,
+    "ventas_1": 32542,
+    "compras_2": 60574,
+    "ventas_2": 62008,
+    "compras_5": 73777,
+    "ventas_5": 83625,
+    "muro_compra": 21221,
+    "muro_compra_dist": -1.503,
+    "muro_venta": 17039,
+    "muro_venta_dist": 1.687
+   }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "GPSUSDT",
+   "base": "GPS",
+   "quote": "USDT",
+   "precio": 0.00844,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 63,
+    "minimo_mas_alto": 1.88,
+    "long_short": 0.9372,
+    "acumulacion": 0,
+    "flujo_tendencia": -10.374
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.1184,
+    "compras_1": 12025,
+    "ventas_1": 9964,
+    "compras_2": 24872,
+    "ventas_2": 21921,
+    "compras_5": 28740,
+    "ventas_5": 23516,
+    "muro_compra": 4938,
+    "muro_compra_dist": -1.954,
+    "muro_venta": 5029,
+    "muro_venta_dist": 1.835
+   }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "NXPCUSDT",
+   "base": "NXPC",
+   "quote": "USDT",
+   "precio": 0.1668,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 58,
+    "minimo_mas_alto": 4.78,
+    "long_short": 0.9069,
+    "acumulacion": 0,
+    "flujo_tendencia": -1.417
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.12,
+    "compras_1": 23048,
+    "ventas_1": 26693,
+    "compras_2": 36960,
+    "ventas_2": 47455,
+    "compras_5": 53484,
+    "ventas_5": 72173,
+    "muro_compra": 15203,
+    "muro_compra_dist": -3.061,
+    "muro_venta": 15922,
+    "muro_venta_dist": 3.181
+   }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "FFUSDT",
+   "base": "FF",
+   "quote": "USDT",
+   "precio": 0.08997,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 35,
+    "minimo_mas_alto": -3.49,
+    "long_short": 0.4543,
+    "acumulacion": 0,
+    "flujo_tendencia": -1.087
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0445,
+    "compras_1": 30195,
+    "ventas_1": 34525,
+    "compras_2": 40937,
+    "ventas_2": 56267,
+    "compras_5": 46851,
+    "ventas_5": 67279,
+    "muro_compra": 11014,
+    "muro_compra_dist": -0.756,
+    "muro_venta": 17022,
+    "muro_venta_dist": 1.834
+   }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "XAUTUSDT",
+   "base": "XAUT",
+   "quote": "USDT",
+   "precio": 4030.67,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 36,
+    "minimo_mas_alto": -0.04,
+    "long_short": 1.1053,
+    "acumulacion": 0,
+    "flujo_tendencia": 10.705
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0002,
+    "compras_1": 1505451,
+    "ventas_1": 1496507,
+    "compras_2": 1548086,
+    "ventas_2": 1780495,
+    "muro_compra": 500000,
+    "muro_compra_dist": -0.861,
+    "muro_venta": 500000,
+    "muro_venta_dist": 0.94
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "ZILUSDT",
+   "base": "ZIL",
+   "quote": "USDT",
+   "precio": 0.001842,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 48,
+    "minimo_mas_alto": -6.23,
+    "long_short": 1.4832,
+    "acumulacion": 0,
+    "flujo_tendencia": -1.959
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0543,
+    "compras_1": 56415,
+    "ventas_1": 57489,
+    "compras_2": 91741,
+    "ventas_2": 86584,
+    "compras_5": 184568,
+    "ventas_5": 128077,
+    "muro_compra": 13622,
+    "muro_compra_dist": -2.851,
+    "muro_venta": 6816,
+    "muro_venta_dist": 1.276
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "DYDXUSDT",
+   "base": "DYDX",
+   "quote": "USDT",
+   "precio": 0.1066,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 48,
+    "minimo_mas_alto": -1.22,
+    "long_short": 1.6889,
+    "acumulacion": 0,
+    "flujo_tendencia": 0.803
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0939,
+    "compras_1": 77528,
+    "ventas_1": 70247,
+    "compras_2": 197738,
+    "ventas_2": 144488,
+    "compras_5": 628264,
+    "ventas_5": 347903,
+    "muro_compra": 105061,
+    "muro_compra_dist": -4.552,
+    "muro_venta": 42955,
+    "muro_venta_dist": 1.267
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "POLYXUSDT",
+   "base": "POLYX",
+   "quote": "USDT",
+   "precio": 0.03265,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 50,
+    "minimo_mas_alto": -0.1,
+    "long_short": 1.3992,
+    "acumulacion": 0,
+    "flujo_tendencia": -0.434
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0613,
+    "compras_1": 102842,
+    "ventas_1": 106513,
+    "compras_2": 206819,
+    "ventas_2": 189417,
+    "compras_5": 303778,
+    "ventas_5": 222650,
+    "muro_compra": 28247,
+    "muro_compra_dist": -1.472,
+    "muro_venta": 29926,
+    "muro_venta_dist": 0.92
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "GPSUSDT",
+   "base": "GPS",
+   "quote": "USDT",
+   "precio": 0.008449,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 54,
+    "minimo_mas_alto": 1.73,
+    "long_short": 0.9372,
+    "acumulacion": 0,
+    "flujo_tendencia": -0.697
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0948,
+    "compras_1": 32405,
+    "ventas_1": 40452,
+    "compras_2": 79191,
+    "ventas_2": 59740,
+    "compras_5": 158110,
+    "ventas_5": 120343,
+    "muro_compra": 22682,
+    "muro_compra_dist": -4.516,
+    "muro_venta": 24973,
+    "muro_venta_dist": 4.622
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "PAXGUSDT",
+   "base": "PAXG",
+   "quote": "USDT",
+   "precio": 4041.95,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 59,
+    "minimo_mas_alto": 0.12,
+    "long_short": 2.7707,
+    "acumulacion": 0,
+    "flujo_tendencia": 2.536
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0002,
+    "muro_compra": 469622,
+    "muro_compra_dist": -0.236,
+    "muro_venta": 463412,
+    "muro_venta_dist": 0.105
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "B2USDT",
+   "base": "B2",
+   "quote": "USDT",
+   "precio": 0.3955,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 47,
+    "minimo_mas_alto": -2.69,
+    "long_short": 2.4843,
+    "acumulacion": 0,
+    "flujo_tendencia": 2.344
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0506,
+    "compras_1": 19994,
+    "ventas_1": 36195,
+    "compras_2": 48320,
+    "ventas_2": 51862,
+    "compras_5": 63518,
+    "ventas_5": 67596,
+    "muro_compra": 6932,
+    "muro_compra_dist": -1.442,
+    "muro_venta": 6176,
+    "muro_venta_dist": 0.86
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "NXPCUSDT",
+   "base": "NXPC",
+   "quote": "USDT",
+   "precio": 0.1667,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 65,
+    "minimo_mas_alto": 4.86,
+    "long_short": 0.9069,
+    "acumulacion": 1,
+    "flujo_tendencia": -0.171
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.12,
+    "compras_1": 34786,
+    "ventas_1": 35684,
+    "compras_2": 78887,
+    "ventas_2": 82374,
+    "compras_5": 183340,
+    "ventas_5": 158746,
+    "muro_compra": 12841,
+    "muro_compra_dist": -3.959,
+    "muro_venta": 14617,
+    "muro_venta_dist": 1.92
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "CROSSUSDT",
+   "base": "CROSS",
+   "quote": "USDT",
+   "precio": 0.10708,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 63,
+    "minimo_mas_alto": 2.51,
+    "long_short": 2.2031,
+    "acumulacion": 0,
+    "flujo_tendencia": 2.159
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.1121,
+    "compras_1": 12230,
+    "ventas_1": 7418,
+    "compras_2": 62723,
+    "ventas_2": 53396,
+    "compras_5": 114234,
+    "ventas_5": 74331,
+    "muro_compra": 34300,
+    "muro_compra_dist": -1.933,
+    "muro_venta": 35685,
+    "muro_venta_dist": 1.962
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "FFUSDT",
+   "base": "FF",
+   "quote": "USDT",
+   "precio": 0.09006,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 39,
+    "minimo_mas_alto": -3.59,
+    "long_short": 0.4543,
+    "acumulacion": 0,
+    "flujo_tendencia": -8.942
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0111,
+    "compras_1": 33422,
+    "ventas_1": 49089,
+    "compras_2": 82675,
+    "ventas_2": 73068,
+    "compras_5": 636861,
+    "ventas_5": 194487,
+    "muro_compra": 97657,
+    "muro_compra_dist": -4.46,
+    "muro_venta": 22318,
+    "muro_venta_dist": 3.549
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "SPACEUSDT",
+   "base": "SPACE",
+   "quote": "USDT",
+   "precio": 0.003586,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 59,
+    "minimo_mas_alto": -0.76,
+    "long_short": 2.962,
+    "acumulacion": 0,
+    "flujo_tendencia": -0.204
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0279,
+    "compras_1": 22008,
+    "ventas_1": 22370,
+    "compras_2": 60200,
+    "ventas_2": 49444,
+    "compras_5": 143257,
+    "ventas_5": 85895,
+    "muro_compra": 40893,
+    "muro_compra_dist": -3.389,
+    "muro_venta": 13703,
+    "muro_venta_dist": 2.022
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "XAUTUSDT",
+   "base": "XAUT",
+   "quote": "USDT",
+   "precio": 4028.77,
+   "hora": "2026-11-04T14:52:18.040Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 41,
+    "minimo_mas_alto": -0.08,
+    "long_short": 1.1053,
+    "acumulacion": 0,
+    "flujo_tendencia": 2.872
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0002,
+    "muro_compra": 315000,
+    "muro_compra_dist": -0.366,
+    "muro_venta": 315250,
+    "muro_venta_dist": 0.267
+   }
+  }
+ ]
+}
