@@ -512,7 +512,9 @@
     "muro_compra_dist": -1.442,
     "muro_venta": 6176,
     "muro_venta_dist": 0.86
-   }
+   },
+   "estrella": true,
+   "estrella_hora": "2026-11-04T15:10:54.187Z"
   },
   {
    "mercado": "futures",
