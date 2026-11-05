@@ -1,0 +1,113 @@
+{
+ "fecha": "2026-11-04",
+ "monedas": [
+  {
+   "mercado": "spot",
+   "simbolo": "PAXGUSDT",
+   "base": "PAXG",
+   "quote": "USDT",
+   "precio": 4118.64,
+   "hora": "2026-11-05T13:50:36.143Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 50,
+    "minimo_mas_alto": 0.1,
+    "long_short": 2.7538,
+    "acumulacion": 0,
+    "flujo_tendencia": 8.771
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0002,
+    "compras_1": 566413,
+    "ventas_1": 2794716,
+    "compras_2": 701068,
+    "ventas_2": 3431345,
+    "muro_compra": 79380,
+    "muro_compra_dist": -0.183,
+    "muro_venta": 500450,
+    "muro_venta_dist": 0.514
+   }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "XAUTUSDT",
+   "base": "XAUT",
+   "quote": "USDT",
+   "precio": 4109.2,
+   "hora": "2026-11-05T13:50:36.143Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 33,
+    "minimo_mas_alto": -0.04,
+    "long_short": 1.4143,
+    "acumulacion": 0,
+    "flujo_tendencia": 7.799
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0002,
+    "compras_1": 1742881,
+    "ventas_1": 1746232,
+    "compras_2": 1826192,
+    "ventas_2": 2038789,
+    "muro_compra": 500000,
+    "muro_compra_dist": -0.972,
+    "muro_venta": 500000,
+    "muro_venta_dist": 0.826
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "PAXGUSDT",
+   "base": "PAXG",
+   "quote": "USDT",
+   "precio": 4116.65,
+   "hora": "2026-11-05T13:50:36.143Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 83,
+    "minimo_mas_alto": 0.12,
+    "long_short": 2.7538,
+    "acumulacion": 0,
+    "flujo_tendencia": 1.509
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0002,
+    "muro_compra": 315000,
+    "muro_compra_dist": -0.258,
+    "muro_venta": 199756,
+    "muro_venta_dist": 0.08
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "XAUTUSDT",
+   "base": "XAUT",
+   "quote": "USDT",
+   "precio": 4107.68,
+   "hora": "2026-11-05T13:50:36.143Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 33,
+    "minimo_mas_alto": -0.08,
+    "long_short": 1.4143,
+    "acumulacion": 0,
+    "flujo_tendencia": 1.615
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0002,
+    "muro_compra": 315003,
+    "muro_compra_dist": -0.314,
+    "muro_venta": 315004,
+    "muro_venta_dist": 0.18
+   }
+  }
+ ]
+}
