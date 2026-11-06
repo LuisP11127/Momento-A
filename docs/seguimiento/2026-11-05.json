@@ -214,6 +214,68 @@
     "muro_venta": 6207,
     "muro_venta_dist": 3.761
    }
+  },
+  {
+   "mercado": "spot",
+   "simbolo": "BANKUSDT",
+   "base": "BANK",
+   "quote": "USDT",
+   "precio": 0.0247,
+   "hora": "2026-11-06T07:46:24.114Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 53,
+    "minimo_mas_alto": 0.86,
+    "long_short": 1.2026,
+    "acumulacion": 0,
+    "flujo_tendencia": 2.028
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.4057,
+    "compras_1": 17632,
+    "ventas_1": 25372,
+    "compras_2": 48427,
+    "ventas_2": 56160,
+    "compras_5": 75536,
+    "ventas_5": 72974,
+    "muro_compra": 11983,
+    "muro_compra_dist": -1.014,
+    "muro_venta": 14454,
+    "muro_venta_dist": 0.609
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "BANKUSDT",
+   "base": "BANK",
+   "quote": "USDT",
+   "precio": 0.02468,
+   "hora": "2026-11-06T07:46:24.114Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 63,
+    "minimo_mas_alto": 1.16,
+    "long_short": 1.2026,
+    "acumulacion": 0,
+    "flujo_tendencia": -0.384
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0405,
+    "compras_1": 111363,
+    "ventas_1": 75195,
+    "compras_2": 165633,
+    "ventas_2": 107319,
+    "compras_5": 421245,
+    "ventas_5": 239597,
+    "muro_compra": 30520,
+    "muro_compra_dist": -4.6,
+    "muro_venta": 33092,
+    "muro_venta_dist": 4.357
+   }
   }
  ]
 }
