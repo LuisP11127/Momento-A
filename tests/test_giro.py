@@ -95,6 +95,7 @@ def test_features_measure_buying_flow_and_outcomes_measure_what_came_after():
     assert f["precio_7d"] < 0 and f["acumulacion"] == 1.0  # compras a mercado mientras el precio cae
     assert f["brecha_ma7_ma25"] < 0 and f["dist_ma99"] < 0 and f["rsi"] is not None
     assert f["oi_24h"] is None and f["financiacion"] is None  # sin datos de futuros
+    assert f["vol_ma5_25"] < 1 and f["vol_a_punto"] == 0.0  # el volumen en USDT baja con el precio: no se acerca
     o = outcomes(entry, data, now_ms=scan + 30 * DAY_MS)
     assert o["max_1d"] < 1 < o["max_3d"]  # el salto de +30 % llegó entre las horas 30 y 40
     assert o["max_3d"] == pytest.approx((1.3 * 1.001 - 1) * 100, rel=1e-6)
