@@ -83,6 +83,8 @@ LABELS = {
     "tendencia_vol": "Volumen 5 días frente a 15",
     "vol_verde_roja": "Volumen velas verdes / rojas",
     "obv_7d": "OBV 7 días",
+    "vol_ma5_25": "Volumen: MA(5) / MA(25)",
+    "vol_a_punto": "Volumen: MA(5) a punto de cruzar la MA(25)",
     "dist_ma7": "Precio frente a MA7 (%)",
     "brecha_ma7_ma25": "MA7 frente a MA25 (%)",
     "pendiente_ma7": "Pendiente de la MA7 (3 días, %)",
@@ -274,6 +276,16 @@ def features(entry: Entry, data: SymbolData, btc_hourly: Sequence[Candle] = ()) 
         f["obv_7d"] = obv / mean20 if mean20 else None
     else:
         f["tendencia_vol"] = f["vol_verde_roja"] = f["obv_7d"] = None
+    # Medias del volumen diario (velas cerradas): la MA(5) frente a la MA(25), y si está a punto de cruzarla
+    # (le falta menos del 15 % y lleva dos días acercándose).
+    if len(closed) >= 27:
+        qv = [c.quote_volume for c in closed]
+        ratio = lambda end: statistics.fmean(qv[end - 5:end]) / statistics.fmean(qv[end - 25:end]) if statistics.fmean(qv[end - 25:end]) else None
+        r0, r1, r2 = ratio(len(qv)), ratio(len(qv) - 1), ratio(len(qv) - 2)
+        f["vol_ma5_25"] = r0
+        f["vol_a_punto"] = None if None in (r0, r1, r2) else float(0.85 <= r0 < 1 and r0 > r1 > r2)
+    else:
+        f["vol_ma5_25"] = f["vol_a_punto"] = None
 
     # Flujo comprador: compras a mercado sobre el volumen (en la moneda base).
     def flow(cs: Sequence[Candle]) -> Optional[float]:
