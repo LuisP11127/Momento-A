@@ -6375,6 +6375,17 @@
     "muro_venta": 13078,
     "muro_venta_dist": 1.912
    }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "SIGNUSDT",
+   "base": "SIGN",
+   "quote": "USDT",
+   "precio": 0.008901,
+   "hora": "2026-11-13T06:24:24.352Z",
+   "intervalo": "1d",
+   "estrella": true,
+   "estrella_hora": "2026-11-13T06:25:50.727Z"
   }
  ]
 }
