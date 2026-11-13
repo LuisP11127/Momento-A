@@ -30,7 +30,9 @@
     "muro_compra_dist": -0.43,
     "muro_venta": 28083,
     "muro_venta_dist": 0.43
-   }
+   },
+   "estrella": true,
+   "estrella_hora": "2026-11-13T07:03:14.829Z"
   },
   {
    "mercado": "spot",
@@ -154,7 +156,9 @@
     "muro_compra_dist": -0.582,
     "muro_venta": 2913,
     "muro_venta_dist": 0.582
-   }
+   },
+   "estrella": true,
+   "estrella_hora": "2026-11-13T07:03:13.488Z"
   },
   {
    "mercado": "spot",
@@ -184,7 +188,9 @@
     "muro_compra_dist": -2.572,
     "muro_venta": 10822,
     "muro_venta_dist": 3.177
-   }
+   },
+   "estrella": false,
+   "estrella_hora": "2026-11-13T07:03:20.597Z"
   },
   {
    "mercado": "spot",
@@ -215,7 +221,9 @@
     "muro_compra_dist": -1.924,
     "muro_venta": 4428,
     "muro_venta_dist": 1.853
-   }
+   },
+   "estrella": true,
+   "estrella_hora": "2026-11-13T07:03:12.326Z"
   },
   {
    "mercado": "spot",
