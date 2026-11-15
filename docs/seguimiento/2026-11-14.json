@@ -1,0 +1,98 @@
+{
+ "fecha": "2026-11-14",
+ "monedas": [
+  {
+   "mercado": "spot",
+   "simbolo": "GPSUSDT",
+   "base": "GPS",
+   "quote": "USDT",
+   "precio": 0.00816,
+   "hora": "2026-11-15T05:59:40.612Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 44,
+    "minimo_mas_alto": -0.94,
+    "long_short": 1.0773,
+    "acumulacion": 0,
+    "flujo_tendencia": 1.261
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.2454,
+    "compras_1": 24604,
+    "ventas_1": 25838,
+    "compras_2": 44004,
+    "ventas_2": 36419,
+    "compras_5": 65757,
+    "ventas_5": 39798,
+    "muro_compra": 8972,
+    "muro_compra_dist": -3.436,
+    "muro_venta": 3645,
+    "muro_venta_dist": 0.368
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "GPSUSDT",
+   "base": "GPS",
+   "quote": "USDT",
+   "precio": 0.008134,
+   "hora": "2026-11-15T05:59:40.612Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 44,
+    "minimo_mas_alto": -0.44,
+    "long_short": 1.0773,
+    "acumulacion": 0,
+    "flujo_tendencia": 1.607
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0492,
+    "compras_1": 41198,
+    "ventas_1": 27432,
+    "compras_2": 109354,
+    "ventas_2": 64886,
+    "compras_5": 304746,
+    "ventas_5": 160732,
+    "muro_compra": 39404,
+    "muro_compra_dist": -2.89,
+    "muro_venta": 25036,
+    "muro_venta_dist": 4.857
+   }
+  },
+  {
+   "mercado": "futures",
+   "simbolo": "ALLOUSDT",
+   "base": "ALLO",
+   "quote": "USDT",
+   "precio": 0.15849,
+   "hora": "2026-11-15T05:59:40.612Z",
+   "intervalo": "1d",
+   "giro": {
+    "v": 1,
+    "indice": 63,
+    "minimo_mas_alto": -0.19,
+    "long_short": 0.7737,
+    "acumulacion": 0,
+    "flujo_tendencia": -0.414
+   },
+   "libro": {
+    "v": 1,
+    "spread": 0.0315,
+    "compras_1": 77010,
+    "ventas_1": 65284,
+    "compras_2": 120392,
+    "ventas_2": 89363,
+    "compras_5": 267500,
+    "ventas_5": 156031,
+    "muro_compra": 37487,
+    "muro_compra_dist": -4.614,
+    "muro_venta": 9358,
+    "muro_venta_dist": 4.62
+   }
+  }
+ ]
+}
