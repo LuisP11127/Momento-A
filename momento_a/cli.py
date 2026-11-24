@@ -8,11 +8,13 @@ import math
 import sys
 from dataclasses import replace
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional, Sequence
 
 from .binance import FUTURES, FUTURES_URL, SPOT, SPOT_URL, BinanceClient, BinanceError
 from .report import build_payload, chart_intervals, fetch_chart_candles, write_report
 from .scanner import INTERVALS, SORT_KEYS, Criteria, ScanResult, Signal, scan
+from .seguimiento import record_scan
 
 MARKET_CHOICES = {"spot": (SPOT,), "futuros": (FUTURES,), "ambos": (SPOT, FUTURES)}
 MARKET_LABELS = {SPOT: "SPOT", FUTURES: "FUT"}
@@ -57,6 +59,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="guardar un informe en Markdown (lo usa el resumen de GitHub Actions)")
     p.add_argument("--html", metavar="FICHERO",
                    help="crear el informe con los gráficos interactivos de los pares encontrados")
+    p.add_argument("--seguimiento", metavar="CARPETA",
+                   help="guardar las monedas encontradas en el seguimiento de CARPETA (AAAA-MM-DD.json), "
+                        "con su índice de giro y su libro de órdenes, como la web al escanear")
     p.add_argument("--hilos", type=int, default=8, help="descargas en paralelo (por defecto: 8)")
     p.add_argument("--spot-url", default=SPOT_URL, help=f"URL base de spot (por defecto: {SPOT_URL})")
     p.add_argument("--futuros-url", default=FUTURES_URL,
@@ -261,6 +266,14 @@ def main(argv: Optional[Sequence[str]] = None, client: Optional[BinanceClient] =
         for name, msg in list(result.errors.items())[:5]:
             print(f"  {name}: {msg}", file=sys.stderr)
 
+    if args.seguimiento:
+        try:
+            fecha, added, total = record_scan(client, signals, Path(args.seguimiento), args.intervalo,
+                                              int(datetime.now(timezone.utc).timestamp() * 1000), workers=max(1, args.hilos))
+        except BinanceError as exc:
+            print(f"Error al guardar en el seguimiento: {exc}", file=sys.stderr)
+            return 1
+        print(f"\nSeguimiento {fecha}: {added} monedas nuevas ({total} en el día) en {args.seguimiento}")
     if args.csv:
         write_csv(args.csv, signals)
         print(f"\nCSV guardado en {args.csv}")

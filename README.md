@@ -106,6 +106,10 @@ filtros en ese momento, con su precio, en un apartado **«Seguimiento 1 de octub
 octubre»**… Si escaneas varias veces el mismo día, se añaden las monedas nuevas y cada una
 conserva el primer precio del día.
 
+Además, el workflow **Escaneo diario** escanea **cada día a las 16:00 UTC** (11:00 en Lima) sin que
+tengas la página abierta y guarda lo que encuentra en el mismo seguimiento, con su índice de giro y
+su libro de órdenes (ver [Escaneo diario](#escaneo-diario)).
+
 Cada apartado es **la vela diaria de Binance**: cambia a las **00:00 UTC**, cuando abre la vela
 nueva, y se nombra con la fecha en que abre en tu hora, igual que la muestra Binance con tu
 zona horaria. En Lima (UTC−5) la vela abre a las **7:00 pm**:
@@ -185,6 +189,7 @@ navegador y lo sube todo al conectar una clave nueva.
 | **Scanner** | Pasa los tests y hace un escaneo real desde los servidores de GitHub. Resultado en el resumen de la ejecución e informe con los gráficos (`.html`, `.json`, `.csv`) en **Artifacts → momento-a**. | A mano en **Actions → Scanner → Run workflow** (con los filtros como opciones), y en cada pull request y cada cambio en `main`. |
 | **Web** | Publica la web en GitHub Pages con la lista de acciones tokenizadas al día y el seguimiento guardado en el repositorio. | En cada cambio en `main`, una vez al día y a mano. |
 | **Indicador** | Prueba el índice de giro con el historial del seguimiento (ver abajo). Informe en el resumen de la ejecución y datos de cada moneda en **Artifacts → indicador**. | Cada lunes y a mano en **Actions → Indicador → Run workflow**. |
+| **Escaneo diario** | Escanea con los filtros del workflow y guarda las monedas en el seguimiento, como la web (ver abajo). Después vuelve a publicar la web. | Cada día a las 16:00 UTC y a mano en **Actions → Escaneo diario → Run workflow**. |
 
 Para que **Web** publique la página, GitHub Pages tiene que estar activado con
 **Settings → Pages → Build and deployment → Source: GitHub Actions**.
@@ -193,6 +198,27 @@ Los servidores de GitHub están en EE. UU., donde Binance bloquea `api.binance.c
 `fapi.binance.com` (error 451). El scanner lo detecta y pasa solo a `data-api.binance.vision`
 (spot) y `www.binance.com` (futuros), que sirven los mismos datos públicos; lo indica en el
 resultado.
+
+### Escaneo diario
+
+`.github/workflows/escaneo-diario.yml` escanea spot y futuros cada día a las **16:00 UTC** (11:00 en
+Lima) desde los servidores de GitHub y guarda las monedas que cumplen los filtros en
+`docs/seguimiento/`, igual que la web con **Guardar en seguimiento**:
+
+- el día es el de la vela diaria en la hora de Lima, como en la web;
+- cada moneda lleva su precio y la hora del escaneo, su índice de giro (con velas 1D) y la foto de su
+  libro de órdenes;
+- si ese día ya la habías guardado tú, se queda la tuya (su primer precio del día); si guardas a la
+  vez desde la web, se juntan las dos.
+
+Los filtros están al principio del archivo, en `env:`, con los de tu último escaneo en la web (23 de
+noviembre de 2026): margen bajo la MA7 **0 %**, máximo sobre la MA7 **10 %**, **con velas rojas**,
+MA25 < MA99, sin volumen mínimo ni acumulación, vela en curso. Para cambiarlos, edita esos valores
+en GitHub (lápiz en el archivo → **Commit changes**). Para cambiar la hora, edita `cron` (en UTC).
+
+GitHub puede arrancar los workflows programados unos minutos tarde, y los pausa si el repositorio
+pasa 60 días sin actividad (avisa por correo y se reactiva en **Actions**). Desde la línea de comandos
+es `python -m momento_a ... --seguimiento docs/seguimiento`.
 
 ## Índice de giro (en pruebas)
 

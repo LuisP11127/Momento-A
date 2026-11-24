@@ -218,6 +218,11 @@ class BinanceClient:
             start = page[-1].open_time + 1
         return out
 
+    def depth(self, market: str, symbol: str, limit: int) -> dict:
+        """Libro de órdenes: ``{"bids": [[precio, cantidad], ...], "asks": [...]}``, del mejor precio hacia fuera."""
+        path = "/api/v3/depth" if market == SPOT else "/fapi/v1/depth"
+        return self._get(market, path, {"symbol": symbol, "limit": limit})
+
     def futures_data(self, path: str, params: dict) -> Any:
         """Datos de derivados de futuros (interés abierto, financiación, ratio long/short...)."""
         return self._get(FUTURES, path, params)

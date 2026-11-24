@@ -1,0 +1,100 @@
+name: Escaneo diario
+
+# Escanea Binance cada día a la misma hora y guarda las monedas que cumplen los filtros en el seguimiento
+# (docs/seguimiento/AAAA-MM-DD.json), con su índice de giro y su libro de órdenes, igual que la web al pulsar
+# «Escanear» con «Guardar en seguimiento». Después vuelve a publicar la web para que salgan en «Seguimiento».
+# GitHub puede arrancarlo unos minutos tarde. También se lanza a mano en Actions → Escaneo diario → Run workflow.
+on:
+  schedule:
+    - cron: "0 16 * * *"  # 16:00 UTC (11:00 en Lima)
+  workflow_dispatch:
+
+# Los filtros (los del último escaneo de la web, el 23 de noviembre de 2026). Para cambiarlos, edita estos valores.
+env:
+  MERCADO: ambos          # ambos, spot o futuros
+  INTERVALO: 1d
+  TOLERANCIA: "0"         # margen bajo la MA7 (%)
+  MAX_ENCIMA: "10"        # máximo sobre la MA7 (%); vacío = sin límite
+  VOLUMEN_MIN: "0"        # volumen mínimo en 24 h (USDT)
+  SIN_MA99: "false"       # true = no exigir MA25 < MA99
+  PERMITIR_ROJA: "true"   # true = incluir velas rojas
+  VELA_CERRADA: "false"   # true = evaluar la última vela cerrada
+
+permissions:
+  contents: write  # para guardar el día de seguimiento
+  actions: write   # para volver a publicar la web
+
+concurrency:
+  group: escaneo-diario
+  cancel-in-progress: false
+
+jobs:
+  escanear:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Escanear y guardar en el seguimiento
+        run: |
+          args=(--mercado "$MERCADO" --intervalo "$INTERVALO" --tolerancia "$TOLERANCIA" --volumen-min "$VOLUMEN_MIN")
+          if [ -n "$MAX_ENCIMA" ]; then args+=(--max-encima "$MAX_ENCIMA"); fi
+          if [ "$SIN_MA99" = "true" ]; then args+=(--sin-ma99); fi
+          if [ "$PERMITIR_ROJA" = "true" ]; then args+=(--permitir-roja); fi
+          if [ "$VELA_CERRADA" = "true" ]; then args+=(--vela-cerrada); fi
+          python -m momento_a "${args[@]}" --seguimiento docs/seguimiento --markdown "$GITHUB_STEP_SUMMARY"
+
+      - name: Subir el día de seguimiento
+        id: guardar
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          file=$(git status --porcelain -- 'docs/seguimiento/*.json' | awk '{print $2}' | head -n 1)
+          if [ -z "$file" ]; then
+            echo "Sin monedas nuevas: no hay nada que guardar."
+            echo "cambios=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          cp "$file" "$RUNNER_TEMP/dia.json"
+          git checkout -q -- "$file" 2>/dev/null || rm -f "$file"  # se vuelve a escribir sobre lo que haya en GitHub
+          # Si la web guardó ese día mientras tanto, se parte de lo que hay en GitHub y se añaden las monedas nuevas.
+          for attempt in 1 2 3 4; do
+            git fetch -q origin main
+            git reset -q --hard origin/main
+            python - "$file" "$RUNNER_TEMP/dia.json" <<'EOF'
+          import json, sys
+          from pathlib import Path
+          from momento_a.seguimiento import merge_day
+          path, scanned = Path(sys.argv[1]), json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+          day, added = merge_day(path, scanned["fecha"], scanned["monedas"])
+          path.write_text(json.dumps(day, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+          print(f"{added} monedas nuevas en {path.name} ({len(day['monedas'])} en el día)")
+          EOF
+            git add "$file"
+            if git diff --cached --quiet; then
+              echo "cambios=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            total=$(python -c "import json,sys; print(len(json.load(open(sys.argv[1]))['monedas']))" "$file")
+            git commit -q -m "Seguimiento $(basename "$file" .json) ($total monedas, escaneo diario)"
+            if git push -q origin HEAD:main; then
+              echo "cambios=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep $((attempt * 5))
+          done
+          echo "::error::No se pudo subir el día de seguimiento a GitHub."
+          exit 1
+
+      - name: Volver a publicar la web
+        if: steps.guardar.outputs.cambios == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run web.yml --ref main --repo "${{ github.repository }}"
