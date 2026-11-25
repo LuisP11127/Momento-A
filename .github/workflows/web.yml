@@ -38,13 +38,13 @@ jobs:
             echo "::notice title=Web sin publicar::Activa GitHub Pages con «Source: GitHub Actions» (ver README)."
           fi
 
-  deploy:
+  # Se construye y se sube en un job y se publica en otro, como en el workflow de ejemplo de GitHub Pages: si se
+  # publica justo después de subir, en el mismo job, a veces GitHub aún no encuentra lo subido («No artifacts
+  # named "github-pages" were found»).
+  build:
     needs: check
     if: needs.check.outputs.enabled == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -54,11 +54,19 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Construir la web
         run: python -m momento_a.web sitio --bstocks --seguimiento docs/seguimiento
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: sitio
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
       - name: Enlace a la web
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
