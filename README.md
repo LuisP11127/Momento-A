@@ -211,9 +211,9 @@ Lima) desde los servidores de GitHub y guarda las monedas que cumplen los filtro
 - si ese día ya la habías guardado tú, se queda la tuya (su primer precio del día); si guardas a la
   vez desde la web, se juntan las dos.
 
-Los filtros están al principio del archivo, en `env:`, con los de tu último escaneo en la web (23 de
-noviembre de 2026): margen bajo la MA7 **0 %**, máximo sobre la MA7 **10 %**, **con velas rojas**,
-MA25 < MA99, sin volumen mínimo ni acumulación, vela en curso. Para cambiarlos, edita esos valores
+Los filtros están al principio del archivo, en `env:`: margen bajo la MA7 **0 %**, máximo sobre la
+MA7 **10 %**, **con velas rojas**, MA25 < MA99, sin volumen mínimo, vela en curso y **acumulación:
+velas entre ±5 % durante al menos 7 días**. Para cambiarlos, edita esos valores
 en GitHub (lápiz en el archivo → **Commit changes**). Para cambiar la hora, edita `cron` (en UTC).
 
 GitHub puede arrancar los workflows programados unos minutos tarde, y los pausa si el repositorio

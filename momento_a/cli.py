@@ -45,6 +45,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="incluir también velas rojas (por defecto solo verdes)")
     p.add_argument("--vela-cerrada", action="store_true",
                    help="evaluar la última vela cerrada en vez de la vela en curso")
+    p.add_argument("--acumulacion", type=float, default=None, metavar="PCT",
+                   help="exigir acumulación: velas seguidas antes de la evaluada con variación dentro de ±PCT %%")
+    p.add_argument("--acum-dias", type=int, default=5, metavar="N",
+                   help="velas de acumulación necesarias con --acumulacion (por defecto: 5)")
     p.add_argument("--volumen-min", type=float, default=0.0, metavar="N",
                    help="volumen mínimo en las últimas 24 h, en la moneda de cotización")
     p.add_argument("--orden", choices=SORT_KEYS, default="fuerza",
@@ -108,6 +112,8 @@ def describe(criteria: Criteria) -> str:
         parts.append("vela verde")
     if criteria.min_quote_volume:
         parts.append(f"volumen 24h ≥ {fmt_volume(criteria.min_quote_volume)}")
+    if criteria.accumulation_pct is not None:
+        parts.append(f"acumulación ±{criteria.accumulation_pct:g}% ≥ {criteria.accumulation_candles} velas")
     return " · ".join(parts)
 
 
@@ -216,6 +222,8 @@ def main(argv: Optional[Sequence[str]] = None, client: Optional[BinanceClient] =
         require_green=not args.permitir_roja,
         min_quote_volume=args.volumen_min,
         closed_candle=args.vela_cerrada,
+        accumulation_pct=args.acumulacion,
+        accumulation_candles=max(1, args.acum_dias),
     )
     client = client or BinanceClient(spot_url=args.spot_url, futures_url=args.futuros_url)
     quote = args.cotizacion.upper()

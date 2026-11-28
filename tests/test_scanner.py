@@ -3,7 +3,7 @@ import pytest
 from helpers import downtrend, make_candles
 from momento_a.binance import FUTURES, SPOT, BinanceError, BinanceFatalError, Instrument
 from momento_a.indicators import sma
-from momento_a.scanner import Criteria, evaluate, scan
+from momento_a.scanner import Criteria, accumulation, evaluate, scan
 
 BTC = Instrument(SPOT, "BTCUSDT", "BTC", "USDT")
 
@@ -81,6 +81,21 @@ def test_closed_candle_mode_ignores_candle_in_progress():
     # Si ya cerró, la misma vela sí cuenta en modo vela cerrada.
     after_close = candles[-1].close_time + 1
     assert evaluate(BTC, candles, Criteria(closed_candle=True), after_close) is not None
+
+
+def test_accumulation_filter_counts_small_candles_before_the_evaluated_one():
+    # Caída de −1 por día (≈ −1,2 % por vela al final) y una última vela verde sobre la MA7.
+    candles, now = downtrend(last_close=88.0)
+    inst = Instrument(SPOT, "AAAUSDT", "AAA", "USDT")
+    assert accumulation(candles, 2) == len(candles) - 1  # todas las anteriores bajan menos del 2 %
+    assert accumulation(candles, 1) == 0
+    assert evaluate(inst, candles, Criteria(accumulation_pct=2, accumulation_candles=7), now)
+    assert evaluate(inst, candles, Criteria(accumulation_pct=1, accumulation_candles=7), now) is None
+    # Una vela de −9 % tres velas antes corta la racha: quedan 2.
+    candles[-4] = candles[-4].__class__(**{**candles[-4].__dict__, "open": candles[-4].close * 1.1})
+    assert accumulation(candles, 5) == 2
+    assert evaluate(inst, candles, Criteria(accumulation_pct=5, accumulation_candles=3), now) is None
+    assert evaluate(inst, candles, Criteria(accumulation_pct=5, accumulation_candles=2), now)
 
 
 def test_bars_above_ma7_counts_consecutive_candles():
