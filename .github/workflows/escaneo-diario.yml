@@ -9,7 +9,7 @@ on:
     - cron: "0 16 * * *"  # 16:00 UTC (11:00 en Lima)
   workflow_dispatch:
 
-# Los filtros (los del último escaneo de la web, el 23 de noviembre de 2026). Para cambiarlos, edita estos valores.
+# Los filtros (los de la web del 28 de noviembre de 2026). Para cambiarlos, edita estos valores.
 env:
   MERCADO: ambos          # ambos, spot o futuros
   INTERVALO: 1d
@@ -19,6 +19,8 @@ env:
   SIN_MA99: "false"       # true = no exigir MA25 < MA99
   PERMITIR_ROJA: "true"   # true = incluir velas rojas
   VELA_CERRADA: "false"   # true = evaluar la última vela cerrada
+  ACUM_PCT: "5"           # acumulación: velas entre ± este % (vacío = sin filtro de acumulación)
+  ACUM_DIAS: "7"          # durante al menos estas velas seguidas
 
 permissions:
   contents: write  # para guardar el día de seguimiento
@@ -49,6 +51,7 @@ jobs:
           if [ "$SIN_MA99" = "true" ]; then args+=(--sin-ma99); fi
           if [ "$PERMITIR_ROJA" = "true" ]; then args+=(--permitir-roja); fi
           if [ "$VELA_CERRADA" = "true" ]; then args+=(--vela-cerrada); fi
+          if [ -n "$ACUM_PCT" ]; then args+=(--acumulacion "$ACUM_PCT" --acum-dias "$ACUM_DIAS"); fi
           python -m momento_a "${args[@]}" --seguimiento docs/seguimiento --markdown "$GITHUB_STEP_SUMMARY"
 
       - name: Subir el día de seguimiento

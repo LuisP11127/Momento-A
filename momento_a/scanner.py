@@ -40,6 +40,10 @@ class Criteria:
     min_quote_volume: float = 0.0
     # Evaluar la última vela cerrada en vez de la vela en curso.
     closed_candle: bool = False
+    # Acumulación (como el filtro de la web): al menos ``accumulation_candles`` velas seguidas, justo antes de la
+    # vela evaluada, que subieron o bajaron como mucho ``accumulation_pct`` % de la apertura al cierre. None = sin filtro.
+    accumulation_pct: Optional[float] = None
+    accumulation_candles: int = 5
 
 
 @dataclass(frozen=True)
@@ -82,6 +86,16 @@ def usable_candles(candles: Sequence[Candle], criteria: Criteria, now_ms: int) -
     return candles
 
 
+def accumulation(candles: Sequence[Candle], pct_limit: float) -> int:
+    """Velas seguidas, justo antes de la última, con variación de apertura a cierre dentro de ±pct_limit %."""
+    count = 0
+    for c in reversed(candles[:-1]):
+        if not c.open > 0 or abs(pct(c.close, c.open)) > pct_limit + 1e-9:
+            break
+        count += 1
+    return count
+
+
 def evaluate(
     instrument: Instrument,
     candles: Sequence[Candle],
@@ -116,6 +130,9 @@ def evaluate(
 
     # La vela toma fuerza.
     if criteria.require_green and not last.close > last.open:
+        return None
+
+    if criteria.accumulation_pct is not None and accumulation(candles, criteria.accumulation_pct) < criteria.accumulation_candles:
         return None
 
     bars_above = 0
